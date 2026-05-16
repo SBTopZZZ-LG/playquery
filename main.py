@@ -19,7 +19,9 @@ async def main():
     )
 
     try:
-        async with managed_ai_provider(helpful_assistant_provider_config) as helpful_assistant_provider:
+        async with managed_ai_provider(
+            helpful_assistant_provider_config
+        ) as helpful_assistant_provider:
             print("Sending message...")
             question = "Can you give me a 2-sentence summary of the MCP protocol?"
             print(f"Question: {question}")
@@ -32,6 +34,7 @@ async def main():
             print("-" * 20)
     except (ValueError, RuntimeError, OSError) as e:
         print(f"\nAn error occurred: {e}")
+
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -3,6 +3,7 @@
 from contextlib import AsyncExitStack, asynccontextmanager
 from dataclasses import dataclass, field
 from enum import Enum
+
 import copilot
 
 from .base import BaseAIProvider, BaseTool
@@ -57,8 +58,7 @@ async def create_ai_provider(config: AIProviderConfig) -> BaseAIProvider:
             try:
                 await client.start()
             except Exception as e:
-                raise RuntimeError(
-                    f"Failed to start Copilot client: {str(e)}") from e
+                raise RuntimeError(f"Failed to start Copilot client: {str(e)}") from e
 
             stack.push_async_callback(client.stop)
 
@@ -72,8 +72,7 @@ async def create_ai_provider(config: AIProviderConfig) -> BaseAIProvider:
                 )
                 provider = CopilotProvider(options)
             except Exception as e:
-                raise RuntimeError(
-                    f"Failed to initialize Copilot provider: {str(e)}") from e
+                raise RuntimeError(f"Failed to initialize Copilot provider: {str(e)}") from e
 
             stack.pop_all()
             return provider

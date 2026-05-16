@@ -9,8 +9,10 @@ Usage — decorator form (recommended)::
     from pydantic import BaseModel, Field
     from ai_providers import define_tool
 
+
     class LookupParams(BaseModel):
         id: str = Field(description="Issue identifier")
+
 
     @define_tool(description="Fetch issue details from the tracker")
     def lookup_issue(params: LookupParams) -> str:
@@ -29,12 +31,14 @@ from __future__ import annotations
 
 import inspect
 import typing
-from typing import Any, Callable, TypeVar, overload
+from collections.abc import Callable
+from typing import Any, TypeVar, overload
 
 from .base import BaseTool, ToolInvocation, ToolResult
 
 try:
     from pydantic import BaseModel as _BaseModel
+
     _PYDANTIC_AVAILABLE = True
 except ImportError:
     _BaseModel = None
@@ -46,6 +50,7 @@ _T = TypeVar("_T")
 # ---------------------------------------------------------------------------
 # Internal helpers
 # ---------------------------------------------------------------------------
+
 
 def _is_pydantic(t: Any) -> bool:
     """Return True if *t* is a Pydantic BaseModel subclass."""
@@ -121,9 +126,7 @@ def _resolve_call_args(
     if takes_params:
         raw_args = invocation.get("arguments") or {}
         if ptype is not None and _is_pydantic(ptype):
-            call_args.append(
-                ptype.model_validate(raw_args)
-            )
+            call_args.append(ptype.model_validate(raw_args))
         else:
             call_args.append(raw_args)
     if takes_invocation:
@@ -142,8 +145,7 @@ def _build_handler(
     to :class:`ToolResult`, and catches handler exceptions so the model
     receives a safe error message rather than a raw traceback.
     """
-    takes_params, takes_invocation, resolved_ptype = _detect_signature(
-        fn, ptype)
+    takes_params, takes_invocation, resolved_ptype = _detect_signature(fn, ptype)
 
     async def _handler(invocation: ToolInvocation) -> ToolResult:
         try:
@@ -183,6 +185,7 @@ def _schema_from_hints(fn: Callable[..., Any]) -> tuple[dict[str, Any] | None, t
 # Public API
 # ---------------------------------------------------------------------------
 
+
 @overload
 def define_tool(
     name: str | None = None,
@@ -218,6 +221,7 @@ def define_tool(
         class PingParams(BaseModel):
             value: str = Field(description="Value to echo")
 
+
         @define_tool(description="Echo value as pong")
         def ping_pong(params: PingParams) -> str:
             return f"pong: {params.value}"
@@ -247,8 +251,7 @@ def define_tool(
     """
 
     def decorator(fn: Callable[..., Any]) -> BaseTool:
-        tool_name = name if name is not None else getattr(
-            fn, "__name__", "unknown_tool")
+        tool_name = name if name is not None else getattr(fn, "__name__", "unknown_tool")
 
         # Resolve schema: explicit > Pydantic auto-generation > empty object
         schema = parameters
@@ -267,8 +270,7 @@ def define_tool(
 
     if handler is not None:
         if name is None:
-            raise ValueError(
-                "'name' is required when using define_tool with 'handler='.")
+            raise ValueError("'name' is required when using define_tool with 'handler='.")
         return decorator(handler)
 
     return decorator

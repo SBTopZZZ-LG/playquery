@@ -1,8 +1,8 @@
 """Copilot AI provider implementation."""
 
-
 from dataclasses import dataclass, field
-from typing import Optional, cast
+from typing import cast
+
 from copilot import CopilotClient, CopilotSession, SessionConfig, Tool
 from copilot import ToolHandler as SDKToolHandler
 
@@ -36,7 +36,7 @@ class CopilotProvider(BaseAIProvider[CopilotProviderOptions]):
         options: Copilot provider options including client, model, system_prompt, and timeout.
     """
 
-    session: Optional[CopilotSession]
+    session: CopilotSession | None
 
     def __init__(self, options: CopilotProviderOptions):
         """Initialize the Copilot provider.
@@ -69,17 +69,15 @@ class CopilotProvider(BaseAIProvider[CopilotProviderOptions]):
         options = self.options
 
         if options.client is None:
-            raise ValueError(
-                "Copilot client must be provided for session initialization.")
-        if options.client.get_state() != 'connected':
-            raise ValueError(
-                "Copilot client must be connected to initialize session.")
+            raise ValueError("Copilot client must be provided for session initialization.")
+        if options.client.get_state() != "connected":
+            raise ValueError("Copilot client must be connected to initialize session.")
         if options.model is None or str.strip(options.model) == "":
-            raise ValueError(
-                "Valid model name must be provided for session initialization.")
+            raise ValueError("Valid model name must be provided for session initialization.")
         if options.timeout <= 0:
             raise ValueError(
-                "Timeout must be a positive floating point number for session initialization.")
+                "Timeout must be a positive floating point number for session initialization."
+            )
 
         if self.session is not None:
             print("Warning: Copilot session already initialized. Reinitializing session.")
@@ -97,10 +95,7 @@ class CopilotProvider(BaseAIProvider[CopilotProviderOptions]):
 
         session_config: SessionConfig = {
             "model": options.model,
-            "system_message": {
-                "content": options.system_prompt,
-                "mode": "replace"
-            },
+            "system_message": {"content": options.system_prompt, "mode": "replace"},
         }
         if sdk_tools:
             session_config["tools"] = sdk_tools
@@ -125,15 +120,13 @@ class CopilotProvider(BaseAIProvider[CopilotProviderOptions]):
             raise ValueError("Copilot session is not initialized.")
 
         response = await self.session.send_and_wait(
-            {"prompt": message},
-            timeout=self.options.timeout
+            {"prompt": message}, timeout=self.options.timeout
         )
 
         if response is None:
             raise RuntimeError("Received null response from Copilot session.")
         if response.data is None:
-            raise RuntimeError(
-                "Received response with null data from Copilot session.")
+            raise RuntimeError("Received response with null data from Copilot session.")
 
         return response.data.content or ""
 
@@ -153,7 +146,6 @@ class CopilotProvider(BaseAIProvider[CopilotProviderOptions]):
         try:
             await self.session.destroy()
         except Exception as e:
-            raise RuntimeError(
-                f"Failed to dispose Copilot session: {str(e)}") from e
+            raise RuntimeError(f"Failed to dispose Copilot session: {str(e)}") from e
         finally:
             self.session = None

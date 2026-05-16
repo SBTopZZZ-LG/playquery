@@ -4,7 +4,7 @@ import json
 from abc import ABC, abstractmethod
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import Any, Generic, Literal, TypedDict, Union, TypeVar
+from typing import Any, Generic, Literal, TypedDict, TypeVar
 
 
 class JSONParseError(Exception):
@@ -51,8 +51,7 @@ class ToolResult(TypedDict, total=False):
     sessionLog: str
 
 
-ToolHandler = Callable[[ToolInvocation],
-                       Union[ToolResult, Awaitable[ToolResult]]]
+ToolHandler = Callable[[ToolInvocation], ToolResult | Awaitable[ToolResult]]
 """Callable that handles a tool invocation.
 
 Accepts a :class:`ToolInvocation` and returns either a :class:`ToolResult`
@@ -80,7 +79,7 @@ class BaseTool:
     handler: ToolHandler
 
 
-T = TypeVar('T', bound=BaseAIProviderOptions)
+T = TypeVar("T", bound=BaseAIProviderOptions)
 
 
 class BaseAIProvider(ABC, Generic[T]):
