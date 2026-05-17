@@ -18,7 +18,20 @@ search_engine:
   timeout: 30.0
 
 # ─────────────────────────────────────────────
-#  Scraper  (coming soon)
+#  Scraper
 # ─────────────────────────────────────────────
-# scraper:
-#   type: patchright
+scraper:
+  # Identifies the scraper implementation to use.
+  type: patchright
+
+  # Run the browser in headless mode.
+  headless: true
+
+  # Browser channel (e.g. 'chrome', 'msedge'). Omit to use bundled Chromium.
+  # channel: chrome
+
+  # Browser locale sent with every request.
+  locale: "en-US"
+
+  # Default page-load timeout in seconds.
+  timeout: 30.0

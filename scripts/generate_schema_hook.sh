@@ -2,7 +2,7 @@
 # Pre-commit hook: regenerate playquery.schema.json and enforce it is staged.
 set -e
 
-.venv/bin/python -m search_engine.config > playquery.schema.json
+.venv/bin/python -m config > playquery.schema.json
 
 # Compare the generated file against the staged (index) version.
 # git show :file returns empty if the file is absent from the index (e.g. git rm'd

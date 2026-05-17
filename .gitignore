@@ -49,3 +49,4 @@ target/
 
 # Misc
 test_search.py
+test_scrape.py

@@ -1,5 +1,52 @@
 {
   "$defs": {
+    "PatchrightOptions": {
+      "description": "Pydantic model for Patchright scraper configuration.",
+      "properties": {
+        "type": {
+          "const": "patchright",
+          "default": "patchright",
+          "title": "Type",
+          "type": "string"
+        },
+        "headless": {
+          "default": true,
+          "title": "Headless",
+          "type": "boolean"
+        },
+        "channel": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Channel"
+        },
+        "locale": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": "en-US",
+          "title": "Locale"
+        },
+        "timeout": {
+          "default": 30.0,
+          "title": "Timeout",
+          "type": "number"
+        }
+      },
+      "title": "PatchrightOptions",
+      "type": "object"
+    },
     "SearXNGOptions": {
       "description": "Pydantic model for SearXNG engine configuration.",
       "properties": {
@@ -62,6 +109,28 @@
         }
       ],
       "title": "Search Engine"
+    },
+    "scraper": {
+      "anyOf": [
+        {
+          "discriminator": {
+            "mapping": {
+              "patchright": "#/$defs/PatchrightOptions"
+            },
+            "propertyName": "type"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/PatchrightOptions"
+            }
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Scraper"
     }
   },
   "required": [

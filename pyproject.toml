@@ -17,7 +17,14 @@ ignore = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["agents", "ai_providers", "tools"]
+known-first-party = [
+  "agents",
+  "ai_providers",
+  "config",
+  "scraper",
+  "search_engine",
+  "tools",
+]
 
 [tool.ruff.format]
 quote-style = "double"

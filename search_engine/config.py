@@ -1,12 +1,10 @@
-"""Pydantic config models and JSON Schema generation for PlayQuery."""
+"""Pydantic config models for the search engine layer."""
 
 from __future__ import annotations
 
-import json
-import sys
-from typing import Annotated
+from typing import Annotated, Union
 
-from pydantic import BaseModel, Field
+from pydantic import Field
 
 from .searxng import SearXNGOptions
 
@@ -16,17 +14,6 @@ from .searxng import SearXNGOptions
 #       Field(discriminator="type"),
 #   ]
 SearchEngineConfig = Annotated[
-    SearXNGOptions,
+    Union[SearXNGOptions],  # noqa: UP007
     Field(discriminator="type"),
 ]
-
-
-class PlayQueryConfig(BaseModel):
-    """Root configuration model for playquery.yaml."""
-
-    search_engine: SearchEngineConfig
-
-
-if __name__ == "__main__":
-    json.dump(PlayQueryConfig.model_json_schema(), sys.stdout, indent=2)
-    sys.stdout.write("\n")

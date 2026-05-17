@@ -5,7 +5,6 @@ from pathlib import Path
 import yaml
 
 from .base import BaseSearchEngine
-from .config import PlayQueryConfig
 from .registry import get_engine_class
 
 
@@ -25,6 +24,8 @@ def load_engine(path: str | Path = "playquery.yaml") -> BaseSearchEngine:
     """
     with open(path, encoding="utf-8") as f:
         data = yaml.safe_load(f)
+
+    from config import PlayQueryConfig  # imported here to avoid circular init-time import
 
     config = PlayQueryConfig.model_validate(data)
     engine_class = get_engine_class(config.search_engine.type)
