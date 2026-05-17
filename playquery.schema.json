@@ -1,0 +1,72 @@
+{
+  "$defs": {
+    "SearXNGOptions": {
+      "description": "Pydantic model for SearXNG engine configuration.",
+      "properties": {
+        "type": {
+          "const": "searxng",
+          "default": "searxng",
+          "title": "Type",
+          "type": "string"
+        },
+        "base_url": {
+          "format": "uri",
+          "minLength": 1,
+          "title": "Base Url",
+          "type": "string"
+        },
+        "user_agent": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "User Agent"
+        },
+        "timeout": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": 30.0,
+          "title": "Timeout"
+        }
+      },
+      "required": [
+        "base_url"
+      ],
+      "title": "SearXNGOptions",
+      "type": "object"
+    }
+  },
+  "description": "Root configuration model for playquery.yaml.",
+  "properties": {
+    "search_engine": {
+      "discriminator": {
+        "mapping": {
+          "searxng": "#/$defs/SearXNGOptions"
+        },
+        "propertyName": "type"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/SearXNGOptions"
+        }
+      ],
+      "title": "Search Engine"
+    }
+  },
+  "required": [
+    "search_engine"
+  ],
+  "title": "PlayQueryConfig",
+  "type": "object"
+}

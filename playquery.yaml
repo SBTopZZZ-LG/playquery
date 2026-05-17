@@ -1,0 +1,24 @@
+# yaml-language-server: $schema=./playquery.schema.json
+
+# ─────────────────────────────────────────────
+#  Search Engine
+# ─────────────────────────────────────────────
+search_engine:
+  # Identifies the search engine implementation to use.
+  # Changing this value switches the entire engine.
+  type: searxng
+
+  # Base URL of your self-hosted SearXNG instance.
+  base_url: http://localhost:8080
+
+  # Optional: custom User-Agent sent with every request.
+  user_agent: "PlayQuery/1.0"
+
+  # Request timeout in seconds. Defaults to 30.0.
+  timeout: 30.0
+
+# ─────────────────────────────────────────────
+#  Scraper  (coming soon)
+# ─────────────────────────────────────────────
+# scraper:
+#   type: patchright

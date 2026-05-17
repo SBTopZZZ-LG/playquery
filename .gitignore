@@ -46,3 +46,6 @@ target/
 
 # pytest
 .pytest_cache/
+
+# Misc
+test_search.py
