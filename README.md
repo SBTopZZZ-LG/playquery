@@ -99,6 +99,23 @@ With that stack running, the MCP Streamable HTTP endpoint is available at:
 http://localhost:8000/mcp
 ```
 
+## Install Without Cloning
+
+For a hosted-style installation that pulls the published image from GHCR instead of building locally, use:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/SBTopZZZ-LG/playquery/main/install-with-docker-compose.sh | bash
+```
+
+The installer:
+
+- prompts for the required environment values
+- downloads `docker-compose.prod.yaml` into a local install directory
+- writes a `.env` file
+- starts the stack with `docker-compose`
+
+The production-oriented Compose file is [docker-compose.prod.yaml](/Users/sbtopzzz/Developer/Projects/Python/playquery/docker-compose.prod.yaml) and uses the published GHCR image instead of a local build.
+
 ## Example Environment Overrides
 
 ```bash
