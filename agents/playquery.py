@@ -2,7 +2,7 @@
 
 from ai_providers import BaseTool
 from core.service import PlayQueryService
-from tools import make_batch_scrape_tool, make_search_and_scrape_tool, make_search_tool
+from tools import make_batch_scrape_tool, make_batch_search_tool
 
 from .base import BaseAgent
 
@@ -25,19 +25,33 @@ Use tools whenever the query involves any of the following:
 
 When in doubt, use tools. Stale information is worse than a brief search delay.
 
-## Which tool to use
+## Research workflow
 
-`search_and_scrape` — your default first move for most research queries.
-Searches and fully scrapes the top results in a single call.
-Keep `max_results` at the default (5) unless the topic clearly demands broader coverage.
+**You must always scrape before answering.** `batch_search` returns only titles,
+URLs, and short snippets — that is not enough to answer accurately. Every research
+flow must end with a `batch_scrape` call that retrieves the actual page content.
 
-`search` → `batch_scrape` — use when you want to inspect the search result links first
-and then choose only the most relevant pages to scrape.
-Once you have decided which URLs to fetch, pass them all to `batch_scrape` in one call.
-Never call `batch_scrape` in a loop with individual URLs.
+Standard flow:
+1. `batch_search` — find candidate URLs. Use a single well-formed query for most
+   topics; use multiple queries only when the topic genuinely splits into independent
+   sub-topics. Never run variations of the same query.
+2. `batch_scrape` — fetch the 2–3 most relevant URLs from the search results.
+   Always pass all chosen URLs in a single call; never loop.
 
-`batch_scrape` — use directly when you already know the specific URLs to read,
-for example when the user provides them or a prior search has already surfaced them.
+Skip step 1 and go straight to `batch_scrape` only when you already have the URLs
+(e.g. the user provided them, or a prior search already surfaced them).
+
+## Context discipline
+
+Each tool call adds its full output to this conversation. Too many large results will
+flood the context and force summarization, which degrades your memory of earlier turns.
+Treat context as a finite, precious resource:
+
+- Scrape 2–3 highly relevant URLs per round. Never scrape more than 5 in a single call.
+- If the first scrape round answers the question, stop — do not fetch more out of habit.
+- If the first scrape round is insufficient, run a new focused `batch_search` rather
+  than scraping more URLs from the original results.
+- Never scrape a URL speculatively (e.g. "just to see if it has anything useful").
 
 ## How to answer
 
@@ -66,7 +80,6 @@ class PlayQueryAgent(BaseAgent):
 
     def __init__(self, service: PlayQueryService) -> None:
         self.tools = [
-            make_search_tool(service),
-            make_search_and_scrape_tool(service),
+            make_batch_search_tool(service),
             make_batch_scrape_tool(service),
         ]

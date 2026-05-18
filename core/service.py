@@ -95,6 +95,25 @@ class PlayQueryService:
         await asyncio.gather(*(_scrape_group(group) for group in groups.values()))
         return [r for r in results if r is not None]
 
+    async def batch_search(
+        self,
+        queries: list[str],
+        max_results: int = 10,
+        options: dict | None = None,
+    ) -> dict[str, list[SearchEngineResult]]:
+        """Run multiple search queries in parallel and return results keyed by query.
+
+        Args:
+            queries: Search query strings to run.
+            max_results: Maximum number of results to return per query.
+            options: Search-option overrides applied to every query.
+
+        Returns:
+            A dict mapping each query string to its list of :class:`SearchEngineResult`.
+        """
+        results = await asyncio.gather(*[self.search(q, max_results, options) for q in queries])
+        return dict(zip(queries, results, strict=True))
+
     async def search_and_scrape(
         self,
         query: str,

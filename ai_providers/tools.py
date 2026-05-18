@@ -67,7 +67,8 @@ def _normalize_result(result: Any) -> ToolResult:
 
     - ``None``                → empty success result
     - ``str``                 → ``textResultForLlm`` success result
-    - ``dict``                → returned as-is (assumed to be ToolResult)
+    - ``dict`` w/ resultType  → returned as-is (assumed to be ToolResult)
+    - ``dict`` / ``list``     → JSON-serialized success result
     - Pydantic ``BaseModel``  → JSON-serialized success result
     - Anything else           → ``str(result)`` success result
     """
@@ -76,7 +77,15 @@ def _normalize_result(result: Any) -> ToolResult:
     if isinstance(result, str):
         return {"textResultForLlm": result, "resultType": "success"}
     if isinstance(result, dict):
-        return result  # type: ignore[return-value]
+        if "resultType" in result:
+            return result  # type: ignore[return-value]
+        import json
+
+        return {"textResultForLlm": json.dumps(result, default=str), "resultType": "success"}
+    if isinstance(result, list):
+        import json
+
+        return {"textResultForLlm": json.dumps(result, default=str), "resultType": "success"}
     if _PYDANTIC_AVAILABLE and _BaseModel is not None and isinstance(result, _BaseModel):
         return {"textResultForLlm": result.model_dump_json(), "resultType": "success"}
     return {"textResultForLlm": str(result), "resultType": "success"}
