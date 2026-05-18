@@ -4,6 +4,7 @@ import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
+from time import perf_counter
 
 from mcp.server.fastmcp import Context, FastMCP
 from starlette.middleware.cors import CORSMiddleware
@@ -106,7 +107,10 @@ async def ask_internet(query: str, ctx: Context) -> str:  # type: ignore[type-ar
         system_prompt=app.agent.system_prompt,
         tools=app.agent.tools,
     ) as provider:
-        return await provider.query(query)
+        started_at = perf_counter()
+        response = await provider.query(query)
+        duration_seconds = perf_counter() - started_at
+        return f"{response}\n\nResponse time: {duration_seconds:.1f}s"
 
 
 if __name__ == "__main__":
