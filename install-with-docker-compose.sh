@@ -35,6 +35,13 @@ latest_release_ref() {
     | head -n 1
 }
 
+ref_has_prod_compose() {
+  local ref="$1"
+
+  [[ -n "$ref" ]] || return 1
+  curl -fsSI "${RAW_BASE}/${ref}/docker-compose.prod.yaml" >/dev/null
+}
+
 prompt_default() {
   local prompt="$1"
   local default_value="$2"
@@ -68,6 +75,11 @@ require_command docker
 COMPOSE_CMD="$(select_compose_command)"
 DEFAULT_REF="$(latest_release_ref || true)"
 DEFAULT_REF="${DEFAULT_REF:-main}"
+
+if ! ref_has_prod_compose "$DEFAULT_REF"; then
+  DEFAULT_REF="main"
+fi
+
 DEFAULT_IMAGE_TAG="$DEFAULT_REF"
 if [[ "$DEFAULT_IMAGE_TAG" == "main" ]]; then
   DEFAULT_IMAGE_TAG="latest"
