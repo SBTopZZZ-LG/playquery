@@ -116,12 +116,53 @@ The installer:
 
 The production-oriented Compose file is [docker-compose.prod.yaml](/Users/sbtopzzz/Developer/Projects/Python/playquery/docker-compose.prod.yaml) and uses the published GHCR image instead of a local build.
 
-## Example Environment Overrides
+## Environment Variables
+
+PlayQuery reads configuration from `playquery.yaml`, then applies environment-variable overrides. The currently supported values below come from the active config models and transport setup in the codebase.
+
+### Runtime Variables
+
+| Variable | Purpose | Possible values | Default |
+| --- | --- | --- | --- |
+| `PLAYQUERY_AI_TYPE` | Selects the AI provider backend. | `copilot` | `copilot` |
+| `PLAYQUERY_AI_MODEL` | Model identifier passed to the Copilot session. | Any non-empty Copilot-supported model name, for example `claude-haiku-4.5` or `claude-sonnet-4.6` | `claude-sonnet-4.6` in code, `claude-haiku-4.5` in the bundled sample config and prod compose |
+| `PLAYQUERY_AI_TIMEOUT` | AI request timeout in seconds. | Any positive number | `300.0` |
+| `PLAYQUERY_AI_GITHUB_TOKEN` | GitHub token used for Copilot auth when provided. | Empty/unset, or any valid GitHub token string | unset |
+| `PLAYQUERY_SEARCH_ENGINE_TYPE` | Selects the search backend. | `searxng` | `searxng` |
+| `PLAYQUERY_SEARCH_ENGINE_BASE_URL` | Base URL for the SearXNG instance. | Any valid HTTP or HTTPS URL | no code default, sample config uses `http://localhost:8080`, Compose uses `http://searxng:8080` |
+| `PLAYQUERY_SEARCH_ENGINE_USER_AGENT` | User-Agent header sent to the search backend. | Any string, or unset | unset in code, sample/prod compose use `PlayQuery/1.0` |
+| `PLAYQUERY_SEARCH_ENGINE_TIMEOUT` | Search request timeout in seconds. | Any number | `30.0` |
+| `PLAYQUERY_SCRAPER_TYPE` | Selects the scraper backend. | `patchright` | `patchright` |
+| `PLAYQUERY_SCRAPER_HEADLESS` | Runs the browser headlessly. | Recommended: `true` or `false`. Truthy values accepted by the parser are `1`, `true`, `yes`, `on`; anything else is treated as false. | `true` |
+| `PLAYQUERY_SCRAPER_CHANNEL` | Browser channel for Patchright. | Unset for bundled Chromium, or a browser channel string such as `chrome` or `msedge` | unset |
+| `PLAYQUERY_SCRAPER_LOCALE` | Browser locale sent during scraping. | Any locale string, for example `en-US` | `en-US` |
+| `PLAYQUERY_SCRAPER_TIMEOUT` | Default page-load timeout in seconds. | Any number | `30.0` |
+| `PLAYQUERY_MCP_TRANSPORT` | Selects the MCP transport mode. | `stdio`, `streamable-http` | `stdio` |
+| `PLAYQUERY_MCP_HOST` | Host/interface to bind for HTTP mode. | Any valid host or bind address such as `0.0.0.0` or `127.0.0.1` | `0.0.0.0` |
+| `PLAYQUERY_MCP_PORT` | Port to bind for HTTP mode. | Any valid TCP port number | `8000` |
+| `PLAYQUERY_MCP_PATH` | Streamable HTTP endpoint path. | Any URL path beginning with `/` | `/mcp` |
+| `PLAYQUERY_MCP_JSON_RESPONSE` | Controls FastMCP JSON response behavior for HTTP transport. | Recommended: `true` or `false`. Truthy values accepted are `1`, `true`, `yes`, `on`; anything else is treated as false. | `true` |
+| `PLAYQUERY_MCP_STATELESS_HTTP` | Controls FastMCP stateless HTTP behavior. | Recommended: `true` or `false`. Truthy values accepted are `1`, `true`, `yes`, `on`; anything else is treated as false. | `true` |
+| `PLAYQUERY_MCP_CORS_ORIGINS` | Allowed CORS origins for HTTP mode. | `*` or a comma-separated list of origins such as `http://localhost:3000,http://localhost:6274` | `*` |
+
+### Installer And Compose Variables
+
+These variables are used by the installer script or the production Compose file rather than the Python app itself.
+
+| Variable | Purpose | Possible values | Default |
+| --- | --- | --- | --- |
+| `PLAYQUERY_INSTALL_DIR` | Target directory created by `install-with-docker-compose.sh`. | Any writable path | prompted interactively |
+| `PLAYQUERY_RELEASE_REF` | Git ref the installer should download from. | Any existing branch, tag, or commit SHA | latest release tag if available, otherwise `main` |
+| `PLAYQUERY_IMAGE_TAG` | Container tag used by [docker-compose.prod.yaml](/Users/sbtopzzz/Developer/Projects/Python/playquery/docker-compose.prod.yaml). | Any published image tag, such as `latest`, `v1.0.0`, or a SHA tag | `latest` |
+| `SEARXNG_BASE_URL` | Base URL advertised to the SearXNG container in Compose. | Any reachable URL for that container, typically `http://searxng:8080` | `http://searxng:8080` |
+
+Example overrides:
 
 ```bash
 export PLAYQUERY_SEARCH_ENGINE_BASE_URL=http://localhost:8080
 export PLAYQUERY_AI_GITHUB_TOKEN=your_token_here
 export PLAYQUERY_MCP_TRANSPORT=streamable-http
+export PLAYQUERY_MCP_CORS_ORIGINS=http://localhost:3000
 ```
 
 ## Project Layout
