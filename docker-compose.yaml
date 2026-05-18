@@ -1,0 +1,24 @@
+services:
+  playquery:
+    build:
+      context: .
+    container_name: playquery
+    depends_on:
+      - searxng
+    ports:
+      - "8000:8000"
+    environment:
+      - "PLAYQUERY_SEARCH_ENGINE_BASE_URL=http://searxng:8080"
+      - "PLAYQUERY_MCP_TRANSPORT=streamable-http"
+      - "PLAYQUERY_MCP_HOST=0.0.0.0"
+      - "PLAYQUERY_MCP_PORT=8000"
+      - "PLAYQUERY_MCP_PATH=/mcp"
+      - "PLAYQUERY_MCP_JSON_RESPONSE=true"
+      - "PLAYQUERY_MCP_STATELESS_HTTP=true"
+
+  searxng:
+    image: searxng/searxng:2026.5.10-df1f24fb7
+    container_name: pq-searxng
+    environment:
+      - "SEARXNG_BASE_URL=http://searxng:8080"
+    restart: unless-stopped
