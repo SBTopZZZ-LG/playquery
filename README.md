@@ -114,7 +114,7 @@ The installer:
 - writes a `.env` file
 - starts the stack with `docker-compose`
 
-The production-oriented Compose file is [docker-compose.prod.yaml](/Users/sbtopzzz/Developer/Projects/Python/playquery/docker-compose.prod.yaml) and uses the published GHCR image instead of a local build.
+The production-oriented Compose file is [docker-compose.prod.yaml](docker-compose.prod.yaml) and uses the published GHCR image instead of a local build.
 
 ## Environment Variables
 
@@ -153,7 +153,7 @@ These variables are used by the installer script or the production Compose file 
 | --- | --- | --- | --- |
 | `PLAYQUERY_INSTALL_DIR` | Target directory created by `install-with-docker-compose.sh`. | Any writable path | prompted interactively |
 | `PLAYQUERY_RELEASE_REF` | Git ref the installer should download from. | Any existing branch, tag, or commit SHA | latest release tag if available, otherwise `main` |
-| `PLAYQUERY_IMAGE_TAG` | Container tag used by [docker-compose.prod.yaml](/Users/sbtopzzz/Developer/Projects/Python/playquery/docker-compose.prod.yaml). | Any published image tag, such as `latest`, `v1.0.0`, or a SHA tag | `latest` |
+| `PLAYQUERY_IMAGE_TAG` | Container tag used by [docker-compose.prod.yaml](docker-compose.prod.yaml). | Any published image tag, such as `latest`, `v1.0.0`, or a SHA tag | `latest` |
 | `SEARXNG_BASE_URL` | Base URL advertised to the SearXNG container in Compose. | Any reachable URL for that container, typically `http://searxng:8080` | `http://searxng:8080` |
 
 Example overrides:
