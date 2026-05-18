@@ -1,0 +1,12 @@
+.git
+.venv
+.vscode
+.ruff_cache
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.python-version
+.pre-commit-config.yaml
+docker-compose.yaml
+test_*.py
