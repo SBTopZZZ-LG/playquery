@@ -201,7 +201,7 @@ fi
 
 IMAGE_TAG="${PLAYQUERY_IMAGE_TAG:-}"
 if [[ -z "$IMAGE_TAG" ]]; then
-  IMAGE_TAG="$(prompt_default 'Docker image tag' "$(value_or_default "$ENV_FILE" "PLAYQUERY_IMAGE_TAG" "$DEFAULT_IMAGE_TAG")")"
+  IMAGE_TAG="$(prompt_default 'Docker image tag' "$DEFAULT_IMAGE_TAG")"
 fi
 
 MCP_PORT="${PLAYQUERY_MCP_PORT:-}"
