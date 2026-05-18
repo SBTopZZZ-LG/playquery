@@ -1,119 +1,58 @@
-"""PlayQuery — main entry point."""
+"""PlayQuery — MCP stdio server."""
 
-import asyncio
-import itertools
-import sys
-from typing import Any
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+from dataclasses import dataclass
+
+from mcp.server.fastmcp import Context, FastMCP
 
 from agents import PlayQueryAgent
-from ai_providers import (
-    BaseTool,
-    ToolInvocation,
-    ToolResult,
-    managed_ai_provider,
-)
-from config import load_config
+from ai_providers import managed_ai_provider
+from config import PlayQueryConfig, load_config
 from core import PlayQueryService
 from scraper import load_scraper
 from search_engine import load_engine
 
-_BRAILLE = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+
+@dataclass
+class _AppContext:
+    config: PlayQueryConfig
+    service: PlayQueryService
+    agent: PlayQueryAgent
 
 
-def _read_query() -> str:
-    """Read lines from stdin until EOF (Ctrl+D) and return the joined text."""
-    lines = []
-    while True:
-        line = sys.stdin.readline()
-        if not line:  # EOF
-            break
-        lines.append(line)
-    return "".join(lines).strip()
-
-
-async def _spinner() -> None:
-    """Animate a braille spinner on the current line until cancelled."""
-    for frame in itertools.cycle(_BRAILLE):
-        sys.stdout.write(f"\rPlayQuery > {frame} ")
-        sys.stdout.flush()
-        try:
-            await asyncio.sleep(0.1)
-        except asyncio.CancelledError:
-            sys.stdout.write("\r\033[K")
-            sys.stdout.flush()
-            return
-
-
-def _fmt_args(args: Any) -> str:
-    """Format tool arguments as a compact key=value string."""
-    if not isinstance(args, dict):
-        return repr(args)
-    parts = []
-    for k, v in args.items():
-        s = repr(v)
-        if len(s) > 60:
-            s = s[:57] + "..."
-        parts.append(f"{k}={s}")
-    return ", ".join(parts)
-
-
-def _with_logging(tool: BaseTool) -> BaseTool:
-    """Wrap a tool's handler to print a status line on each invocation."""
-    original = tool.handler
-
-    async def _logged(invocation: ToolInvocation) -> ToolResult:
-        sys.stdout.write(
-            f"\r\033[K  → {invocation['tool_name']}({_fmt_args(invocation['arguments'])})\n"
-        )
-        sys.stdout.flush()
-        result = original(invocation)
-        if asyncio.iscoroutine(result):
-            result = await result
-        return result  # type: ignore[return-value]
-
-    tool.handler = _logged
-    return tool
-
-
-async def main() -> None:
-    """Start the PlayQuery agent and run an interactive query loop."""
-
-    pq_config = load_config()
+@asynccontextmanager
+async def _lifespan(_: FastMCP) -> AsyncIterator[_AppContext]:
+    config = load_config()
     engine = load_engine()
     scraper = load_scraper()
     service = PlayQueryService(engine=engine, scraper=scraper)
     agent = PlayQueryAgent(service)
+    yield _AppContext(config=config, service=service, agent=agent)
 
-    try:
-        async with managed_ai_provider(
-            pq_config.ai,
-            system_prompt=agent.system_prompt,
-            tools=[_with_logging(t) for t in agent.tools],
-        ) as provider:
-            print("PlayQuery ready. Type your query and press Ctrl+D to submit (Ctrl+C to exit).\n")
-            while True:
-                sys.stdout.write("> ")
-                sys.stdout.flush()
 
-                query = await asyncio.to_thread(_read_query)
-                if not query:
-                    print()  # blank line so the next prompt isn't flush against the last
-                    continue
+mcp = FastMCP("PlayQuery", lifespan=_lifespan)
 
-                spinner_task = asyncio.create_task(_spinner())
-                try:
-                    response = await provider.query(query)
-                finally:
-                    spinner_task.cancel()
-                    await asyncio.gather(spinner_task, return_exceptions=True)
 
-                print(f"\n{response}\n")
+@mcp.tool()
+async def ask_internet(query: str, ctx: Context) -> str:  # type: ignore[type-arg]
+    """Research a question on the internet and return a thorough, cited answer.
 
-    except KeyboardInterrupt:
-        print("\nBye!")
-    except (ValueError, RuntimeError, OSError) as e:
-        print(f"Error: {e}")
+    Searches the web, reads the most relevant pages, and synthesises a response
+    with inline numbered citations and a References section.  Use this whenever
+    you need current, specific, or source-backed information.
+
+    Args:
+        query: The question or research topic to investigate.
+    """
+    app: _AppContext = ctx.request_context.lifespan_context
+    async with managed_ai_provider(
+        app.config.ai,
+        system_prompt=app.agent.system_prompt,
+        tools=app.agent.tools,
+    ) as provider:
+        return await provider.query(query)
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    mcp.run(transport="stdio")
