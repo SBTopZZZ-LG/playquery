@@ -8,7 +8,7 @@ from ai_providers import BaseTool, define_tool
 from core.service import PlayQueryService
 from parsers import ParseResult
 
-from ._utils import make_params_model
+from ._utils import make_params_model, sanitize_schema
 
 
 def make_batch_scrape_tool(service: PlayQueryService) -> BaseTool:
@@ -43,7 +43,8 @@ def make_batch_scrape_tool(service: PlayQueryService) -> BaseTool:
 
     _handler.__annotations__ = {"params": BatchScrapeParams, "return": list[ParseResult]}
 
-    return define_tool(
+    tool = define_tool(
+        name="batch_scrape",
         description=(
             "Scrape multiple URLs and return parsed main-content text for each. "
             "URLs from different hostnames are fetched in parallel; multiple URLs "
@@ -52,5 +53,7 @@ def make_batch_scrape_tool(service: PlayQueryService) -> BaseTool:
             "for example, after a search revealed the relevant links, or when the user "
             "provided URLs directly.  Always pass all chosen URLs in a single call; "
             "never call this tool repeatedly for individual URLs."
-        )
+        ),
     )(_handler)
+    tool.parameters = sanitize_schema(tool.parameters)
+    return tool

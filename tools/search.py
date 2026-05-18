@@ -8,7 +8,7 @@ from ai_providers import BaseTool, define_tool
 from core.service import PlayQueryService
 from search_engine.base import SearchEngineResult
 
-from ._utils import make_params_model
+from ._utils import make_params_model, sanitize_schema
 
 
 def make_search_tool(service: PlayQueryService) -> BaseTool:
@@ -35,4 +35,8 @@ def make_search_tool(service: PlayQueryService) -> BaseTool:
 
     _handler.__annotations__ = {"params": SearchParams, "return": list[SearchEngineResult]}
 
-    return define_tool(description="Search the web and return a list of results.")(_handler)
+    tool = define_tool(name="search", description="Search the web and return a list of results.")(
+        _handler
+    )
+    tool.parameters = sanitize_schema(tool.parameters)
+    return tool

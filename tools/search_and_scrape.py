@@ -8,7 +8,7 @@ from ai_providers import BaseTool, define_tool
 from core.service import PlayQueryService
 from parsers import ParseResult
 
-from ._utils import make_params_model
+from ._utils import make_params_model, sanitize_schema
 
 
 def make_search_and_scrape_tool(service: PlayQueryService) -> BaseTool:
@@ -50,11 +50,14 @@ def make_search_and_scrape_tool(service: PlayQueryService) -> BaseTool:
 
     _handler.__annotations__ = {"params": SearchAndScrapeParams, "return": list[ParseResult]}
 
-    return define_tool(
+    tool = define_tool(
+        name="search_and_scrape",
         description=(
             "Search the web for a query and scrape the top results in one call. "
             "Returns parsed main-content text for each page. "
             "Prefer this for broad research queries where you want depth without "
             "manually selecting which links to visit."
-        )
+        ),
     )(_handler)
+    tool.parameters = sanitize_schema(tool.parameters)
+    return tool
