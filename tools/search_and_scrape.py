@@ -22,12 +22,12 @@ def make_search_and_scrape_tool(service: PlayQueryService) -> BaseTool:
     Raises:
         ValueError: If *service* has no scraper configured.
     """
-    if service._scraper is None:
+    if service._scraper is None:  # pylint: disable=protected-access
         raise ValueError(
             "Cannot build a search-and-scrape tool: no scraper configured in PlayQueryService."
         )
 
-    options_type = type(service._engine.default_search_options())
+    options_type = type(service._engine.default_search_options())  # pylint: disable=protected-access
 
     primary = {
         "query": (str, Field(description="The search query string.")),
@@ -42,13 +42,13 @@ def make_search_and_scrape_tool(service: PlayQueryService) -> BaseTool:
             ),
         ),
     }
-    SearchAndScrapeParams = make_params_model("SearchAndScrapeParams", primary, options_type)
+    search_and_scrape_params = make_params_model("SearchAndScrapeParams", primary, options_type)
 
     async def _handler(params) -> list[ParseResult]:  # type: ignore[no-untyped-def]
         engine_options = {f.name: getattr(params, f.name) for f in dataclasses.fields(options_type)}
         return await service.search_and_scrape(params.query, params.max_results, engine_options)
 
-    _handler.__annotations__ = {"params": SearchAndScrapeParams, "return": list[ParseResult]}
+    _handler.__annotations__ = {"params": search_and_scrape_params, "return": list[ParseResult]}
 
     tool = define_tool(
         name="search_and_scrape",

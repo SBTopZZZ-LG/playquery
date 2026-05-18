@@ -21,19 +21,19 @@ def make_search_tool(service: PlayQueryService) -> BaseTool:
     # TODO (post-MVP): expose Google-dork style parameters (e.g. site:, filetype:)
     # as first-class fields when the engine is a Google-backed implementation.
     """
-    options_type = type(service._engine.default_search_options())
+    options_type = type(service._engine.default_search_options())  # pylint: disable=protected-access
 
     primary = {
         "query": (str, Field(description="The search query string.")),
         "max_results": (int, Field(default=10, description="Maximum number of results to return.")),
     }
-    SearchParams = make_params_model("SearchParams", primary, options_type)
+    search_params = make_params_model("SearchParams", primary, options_type)
 
     async def _handler(params) -> list[SearchEngineResult]:  # type: ignore[no-untyped-def]
         engine_options = {f.name: getattr(params, f.name) for f in dataclasses.fields(options_type)}
         return await service.search(params.query, params.max_results, engine_options)
 
-    _handler.__annotations__ = {"params": SearchParams, "return": list[SearchEngineResult]}
+    _handler.__annotations__ = {"params": search_params, "return": list[SearchEngineResult]}
 
     tool = define_tool(name="search", description="Search the web and return a list of results.")(
         _handler

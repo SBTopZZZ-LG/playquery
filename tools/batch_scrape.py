@@ -22,12 +22,12 @@ def make_batch_scrape_tool(service: PlayQueryService) -> BaseTool:
     Raises:
         ValueError: If *service* has no scraper configured.
     """
-    if service._scraper is None:
+    if service._scraper is None:  # pylint: disable=protected-access
         raise ValueError(
             "Cannot build a batch-scrape tool: no scraper configured in PlayQueryService."
         )
 
-    options_type = type(service._scraper.default_scrape_options())
+    options_type = type(service._scraper.default_scrape_options())  # pylint: disable=protected-access
 
     primary = {
         "urls": (
@@ -35,13 +35,13 @@ def make_batch_scrape_tool(service: PlayQueryService) -> BaseTool:
             Field(description="List of URLs to scrape."),
         ),
     }
-    BatchScrapeParams = make_params_model("BatchScrapeParams", primary, options_type)
+    batch_scrape_params = make_params_model("BatchScrapeParams", primary, options_type)
 
     async def _handler(params) -> list[ParseResult]:  # type: ignore[no-untyped-def]
         scrape_options = {f.name: getattr(params, f.name) for f in dataclasses.fields(options_type)}
         return await service.batch_scrape(params.urls, scrape_options)
 
-    _handler.__annotations__ = {"params": BatchScrapeParams, "return": list[ParseResult]}
+    _handler.__annotations__ = {"params": batch_scrape_params, "return": list[ParseResult]}
 
     tool = define_tool(
         name="batch_scrape",

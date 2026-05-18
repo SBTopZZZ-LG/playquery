@@ -102,7 +102,7 @@ def make_params_model(model_name: str, primary_fields: dict, dc_type: type) -> t
         if f.default is not dataclasses.MISSING:
             fields[f.name] = (annotation, Field(default=f.default))
         elif f.default_factory is not dataclasses.MISSING:  # type: ignore[misc]
-            fields[f.name] = (annotation, Field(default_factory=f.default_factory))  # type: ignore[misc]
+            fields[f.name] = (annotation, Field(default_factory=f.default_factory))  # type: ignore[misc] # pylint: disable=line-too-long
         else:
             fields[f.name] = (annotation, Field(...))
 

@@ -21,21 +21,21 @@ def make_scrape_tool(service: PlayQueryService) -> BaseTool:
     Raises:
         ValueError: If *service* has no scraper configured.
     """
-    if service._scraper is None:
+    if service._scraper is None:  # pylint: disable=protected-access
         raise ValueError("Cannot build a scrape tool: no scraper configured in PlayQueryService.")
 
-    options_type = type(service._scraper.default_scrape_options())
+    options_type = type(service._scraper.default_scrape_options())  # pylint: disable=protected-access
 
     primary = {
         "url": (str, Field(description="The URL to scrape.")),
     }
-    ScrapeParams = make_params_model("ScrapeParams", primary, options_type)
+    scrape_params = make_params_model("ScrapeParams", primary, options_type)
 
     async def _handler(params) -> ParseResult:  # type: ignore[no-untyped-def]
         scrape_options = {f.name: getattr(params, f.name) for f in dataclasses.fields(options_type)}
         return await service.scrape(params.url, scrape_options)
 
-    _handler.__annotations__ = {"params": ScrapeParams, "return": ParseResult}
+    _handler.__annotations__ = {"params": scrape_params, "return": ParseResult}
 
     return define_tool(description="Scrape a URL and return the parsed main-content text.")(
         _handler
