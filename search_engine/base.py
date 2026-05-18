@@ -12,7 +12,7 @@ class BaseSearchEngineOptions(BaseModel):
 
 
 @dataclass
-class BaseEngineSearchOptions:
+class BaseSearchOptions:
     """Base class for search options used in individual search calls."""
 
 
@@ -28,7 +28,7 @@ class SearchEngineResult:
 
 
 T = TypeVar("T", bound=BaseSearchEngineOptions)
-R = TypeVar("R", bound=BaseEngineSearchOptions)
+R = TypeVar("R", bound=BaseSearchOptions)
 
 
 class BaseSearchEngine(ABC, Generic[T, R]):
@@ -51,13 +51,12 @@ class BaseSearchEngine(ABC, Generic[T, R]):
 
     @abstractmethod
     async def search(self, query: str, options: R) -> list[SearchEngineResult]:
-        """
-        Perform a search with the given query.
+        """Perform a search with the given query.
 
         Args:
-            query: The search query string
-            options: Search engine-specific options for this search
+            query: The search query string.
+            options: Search engine-specific options for this search.
 
         Returns:
-            A list of `SearchEngineResult` objects representing the search results.
+            A list of SearchEngineResult objects representing the search results.
         """

@@ -6,7 +6,7 @@ from typing import Annotated, Union
 
 from pydantic import Field
 
-from .copilot import CopilotAIOptions
+from .copilot import CopilotOptions
 
 # Extend this union as new provider implementations are added:
 #   AIConfig = Annotated[
@@ -14,6 +14,6 @@ from .copilot import CopilotAIOptions
 #       Field(discriminator="type"),
 #   ]
 AIConfig = Annotated[
-    Union[CopilotAIOptions],  # noqa: UP007
+    Union[CopilotOptions],  # noqa: UP007
     Field(discriminator="type"),
 ]

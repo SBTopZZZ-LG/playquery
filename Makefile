@@ -1,8 +1,8 @@
-.PHONY: install run generate-schema lint format
+.PHONY: install run generate-schema lint lint-fix format
 
 install:
 	pip install -r requirements.txt
-	pip install pre-commit
+	pip install pre-commit ruff
 	pre-commit install
 	.venv/bin/python -m patchright install chromium
 
@@ -14,6 +14,9 @@ generate-schema:
 
 lint:
 	.venv/bin/ruff check .
+
+lint-fix:
+	.venv/bin/ruff check . --fix
 
 format:
 	.venv/bin/ruff format .

@@ -1,9 +1,9 @@
 """Search engine implementations."""
 
 from .base import (
-    BaseEngineSearchOptions,
     BaseSearchEngine,
     BaseSearchEngineOptions,
+    BaseSearchOptions,
     SearchEngineResult,
 )
 from .config import SearchEngineConfig
@@ -12,7 +12,7 @@ from .registry import get_engine_class, register_engine
 from .searxng import SearXNGOptions, SearXNGSearchEngine, SearXNGSearchOptions
 
 __all__ = [
-    "BaseEngineSearchOptions",
+    "BaseSearchOptions",
     "BaseSearchEngine",
     "BaseSearchEngineOptions",
     "SearchEngineResult",

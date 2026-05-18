@@ -12,7 +12,7 @@ from search_engine.base import BaseSearchEngine, SearchEngineResult
 
 
 class PlayQueryService:
-    """Main PlayQuery orchestration service, coordinating search and scrape operations"""
+    """Main PlayQuery orchestration service, coordinating search and scrape operations."""
 
     def __init__(
         self,

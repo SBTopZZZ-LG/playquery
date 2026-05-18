@@ -9,8 +9,6 @@ class BaseAgent(ABC):
     """Base class for agent definitions.
 
     Subclasses declare the agent's identity as class-level attributes.
-    Callers pass these to :class:`~ai_providers.AIProviderConfig` when
-    constructing a provider session.
 
     Attributes:
         system_prompt: System prompt that establishes the agent's persona.

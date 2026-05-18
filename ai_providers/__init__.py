@@ -1,4 +1,4 @@
-"""AI Providers package."""
+"""AI provider implementations."""
 
 from .base import (
     BaseAIOptions,
@@ -11,7 +11,7 @@ from .base import (
     ToolResultType,
 )
 from .config import AIConfig
-from .copilot import CopilotAIOptions, CopilotProvider
+from .copilot import CopilotOptions, CopilotProvider
 from .factory import (
     create_ai_provider,
     dispose_ai_provider,
@@ -26,7 +26,7 @@ __all__ = [
     "BaseAIProvider",
     "BaseTool",
     "JSONParseError",
-    "CopilotAIOptions",
+    "CopilotOptions",
     "CopilotProvider",
     "ToolHandler",
     "ToolInvocation",

@@ -19,9 +19,9 @@ from searxng_search import (
 )
 
 from .base import (
-    BaseEngineSearchOptions,
     BaseSearchEngine,
     BaseSearchEngineOptions,
+    BaseSearchOptions,
     SearchEngineResult,
 )
 from .registry import register_engine
@@ -49,7 +49,7 @@ class SearXNGOptions(BaseSearchEngineOptions):
 
 
 @dataclass
-class SearXNGSearchOptions(BaseEngineSearchOptions):
+class SearXNGSearchOptions(BaseSearchOptions):
     """Search options specific to SearXNG searches."""
 
     categories: set[Category | str] | None = None

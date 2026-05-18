@@ -1,6 +1,6 @@
 {
   "$defs": {
-    "CopilotAIOptions": {
+    "CopilotOptions": {
       "description": "Pydantic model for Copilot AI provider configuration.",
       "properties": {
         "type": {
@@ -32,7 +32,7 @@
           "title": "Github Token"
         }
       },
-      "title": "CopilotAIOptions",
+      "title": "CopilotOptions",
       "type": "object"
     },
     "PatchrightOptions": {
@@ -170,13 +170,13 @@
     "ai": {
       "discriminator": {
         "mapping": {
-          "copilot": "#/$defs/CopilotAIOptions"
+          "copilot": "#/$defs/CopilotOptions"
         },
         "propertyName": "type"
       },
       "oneOf": [
         {
-          "$ref": "#/$defs/CopilotAIOptions"
+          "$ref": "#/$defs/CopilotOptions"
         }
       ],
       "title": "Ai"

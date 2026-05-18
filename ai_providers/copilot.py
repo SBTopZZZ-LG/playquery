@@ -16,7 +16,7 @@ from .base import BaseAIOptions, BaseAIProvider, BaseTool
 from .registry import register_provider
 
 
-class CopilotAIOptions(BaseAIOptions):
+class CopilotOptions(BaseAIOptions):
     """Pydantic model for Copilot AI provider configuration."""
 
     type: Literal["copilot"] = "copilot"  # type: ignore[assignment]
@@ -71,13 +71,13 @@ def _make_sdk_handler(tool: BaseTool):
 
 
 @register_provider("copilot")
-class CopilotProvider(BaseAIProvider[CopilotAIOptions]):
+class CopilotProvider(BaseAIProvider[CopilotOptions]):
     """Copilot AI provider implementation."""
 
     _client: CopilotClient | None
     _session: CopilotSession | None
 
-    def __init__(self, options: CopilotAIOptions, *, system_prompt: str, tools: list[BaseTool]):
+    def __init__(self, options: CopilotOptions, *, system_prompt: str, tools: list[BaseTool]):
         """Initialize the Copilot provider.
 
         Args:
