@@ -7,13 +7,12 @@ from typing import Any
 
 from agents import PlayQueryAgent
 from ai_providers import (
-    AIProviderConfig,
     BaseTool,
-    ProviderType,
     ToolInvocation,
     ToolResult,
     managed_ai_provider,
 )
+from config import load_config
 from core import PlayQueryService
 from scraper import load_scraper
 from search_engine import load_engine
@@ -79,21 +78,18 @@ def _with_logging(tool: BaseTool) -> BaseTool:
 async def main() -> None:
     """Start the PlayQuery agent and run an interactive query loop."""
 
+    pq_config = load_config()
     engine = load_engine()
     scraper = load_scraper()
     service = PlayQueryService(engine=engine, scraper=scraper)
     agent = PlayQueryAgent(service)
 
-    config = AIProviderConfig(
-        provider_type=ProviderType.COPILOT,
-        model="claude-sonnet-4.6",
-        timeout=300,
-        system_prompt=agent.system_prompt,
-        tools=[_with_logging(t) for t in agent.tools],
-    )
-
     try:
-        async with managed_ai_provider(config) as provider:
+        async with managed_ai_provider(
+            pq_config.ai,
+            system_prompt=agent.system_prompt,
+            tools=[_with_logging(t) for t in agent.tools],
+        ) as provider:
             print("PlayQuery ready. Type your query and press Ctrl+D to submit (Ctrl+C to exit).\n")
             while True:
                 sys.stdout.write("> ")

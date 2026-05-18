@@ -1,5 +1,40 @@
 {
   "$defs": {
+    "CopilotAIOptions": {
+      "description": "Pydantic model for Copilot AI provider configuration.",
+      "properties": {
+        "type": {
+          "const": "copilot",
+          "default": "copilot",
+          "title": "Type",
+          "type": "string"
+        },
+        "model": {
+          "default": "claude-sonnet-4.6",
+          "title": "Model",
+          "type": "string"
+        },
+        "timeout": {
+          "default": 300.0,
+          "title": "Timeout",
+          "type": "number"
+        },
+        "github_token": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Github Token"
+        }
+      },
+      "title": "CopilotAIOptions",
+      "type": "object"
+    },
     "PatchrightOptions": {
       "description": "Pydantic model for Patchright scraper configuration.",
       "properties": {
@@ -131,10 +166,25 @@
       ],
       "default": null,
       "title": "Scraper"
+    },
+    "ai": {
+      "discriminator": {
+        "mapping": {
+          "copilot": "#/$defs/CopilotAIOptions"
+        },
+        "propertyName": "type"
+      },
+      "oneOf": [
+        {
+          "$ref": "#/$defs/CopilotAIOptions"
+        }
+      ],
+      "title": "Ai"
     }
   },
   "required": [
-    "search_engine"
+    "search_engine",
+    "ai"
   ],
   "title": "PlayQueryConfig",
   "type": "object"

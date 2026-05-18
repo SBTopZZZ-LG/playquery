@@ -1,32 +1,30 @@
-"""Factory for loading and instantiating search engines from playquery.yaml."""
+"""Factory for loading and instantiating search engines from configuration."""
 
 from pathlib import Path
-
-import yaml
 
 from .base import BaseSearchEngine
 from .registry import get_engine_class
 
 
 def load_engine(path: str | Path = "playquery.yaml") -> BaseSearchEngine:
-    """Load and instantiate the configured search engine from a YAML file.
+    """Load and instantiate the configured search engine.
+
+    Configuration is resolved in priority order:
+    ``PLAYQUERY_*`` env vars > ``playquery.yaml`` > built-in defaults.
 
     Args:
-        path: Path to the YAML configuration file. Defaults to playquery.yaml.
+        path: Path to the YAML configuration file. Ignored if all required
+            settings are supplied via environment variables.
 
     Returns:
         A fully configured search engine instance.
 
     Raises:
-        FileNotFoundError: If the config file does not exist.
-        ValidationError: If the config file fails Pydantic validation.
+        pydantic.ValidationError: If the merged configuration is invalid.
         KeyError: If the engine type is not registered.
     """
-    with open(path, encoding="utf-8") as f:
-        data = yaml.safe_load(f)
+    from config import load_config  # imported here to avoid circular init-time import
 
-    from config import PlayQueryConfig  # imported here to avoid circular init-time import
-
-    config = PlayQueryConfig.model_validate(data)
+    config = load_config(path)
     engine_class = get_engine_class(config.search_engine.type)
     return engine_class(config.search_engine)

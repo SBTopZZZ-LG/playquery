@@ -1,5 +1,23 @@
 # yaml-language-server: $schema=./playquery.schema.json
 
+# -─────────────────────────────────────────────
+#  AI Provider
+# ──────────────────────────────────────────────
+
+ai:
+  # Identifies the AI provider implementation to use.
+  # Changing this value switches the entire provider.
+  type: copilot
+
+  # Model name or identifier to use with the selected provider.
+  model: claude-sonnet-4.6
+
+  # Request timeout in seconds. Defaults to 300.0.
+  timeout: 300.0
+
+  # Optional GitHub token for providers that support it (e.g. Copilot).
+  github_token: null
+
 # ─────────────────────────────────────────────
 #  Search Engine
 # ─────────────────────────────────────────────

@@ -1,138 +1,76 @@
-"""Factory for creating AI provider instances based on a generic configuration."""
+"""Factory for creating AI provider instances based on configuration."""
 
-import os
-from contextlib import AsyncExitStack, asynccontextmanager
-from dataclasses import dataclass, field
-from enum import Enum
+from contextlib import asynccontextmanager
 
-import copilot
-
-from .base import BaseAIProvider, BaseTool
-from .copilot import CopilotProvider, CopilotProviderOptions
+from .base import BaseAIOptions, BaseAIProvider, BaseTool
+from .registry import get_provider_class
 
 
-class ProviderType(Enum):
-    """Enum for supported AI provider types."""
+def create_ai_provider(
+    options: BaseAIOptions,
+    *,
+    system_prompt: str,
+    tools: list[BaseTool],
+) -> BaseAIProvider:
+    """Create an AI provider instance from configuration options.
 
-    COPILOT = "copilot"
-
-
-@dataclass
-class AIProviderConfig:
-    """Configuration for AI provider construction and session initialization.
-
-    Attributes:
-        provider_type: Provider backend to instantiate.
-        model: Model identifier for provider session creation.
-        timeout: Timeout in seconds for provider requests.
-        system_prompt: System prompt passed to the model at session
-            initialization. Defaults to ``"You are a helpful assistant."``.
-        tools: Provider-agnostic tool definitions to register with the
-            session. Defaults to an empty list (no tools).
-    """
-
-    provider_type: ProviderType
-    model: str
-    timeout: float
-    system_prompt: str = "You are a helpful assistant."
-    tools: list[BaseTool] = field(default_factory=list)
-
-
-async def create_ai_provider(config: AIProviderConfig) -> BaseAIProvider:
-    """Create an AI provider instance from a generic configuration.
+    The returned provider is **not yet started**. Call :meth:`~BaseAIProvider.start`
+    before querying, or use :func:`managed_ai_provider` which handles the full lifecycle.
 
     Args:
-        config: Provider creation settings.
+        options: Provider options. The ``type`` field determines which registered
+            implementation is instantiated.
+        system_prompt: System prompt passed to the model at session initialisation.
+        tools: Provider-agnostic tool definitions to register with the session.
 
     Returns:
-        Initialized provider instance with connected client resources.
+        An unstarted provider instance.
 
     Raises:
-        ValueError: If the provider type is unsupported.
-        RuntimeError: If provider startup or initialization fails.
+        KeyError: If no provider is registered for ``options.type``.
     """
 
-    if config.provider_type == ProviderType.COPILOT:
-        async with AsyncExitStack() as stack:
-            client = copilot.CopilotClient(
-                config=copilot.SubprocessConfig(
-                    github_token=os.environ.get("COPILOT_GITHUB_TOKEN", "").strip() or None,
-                )
-            )
-
-            try:
-                await client.start()
-            except Exception as e:
-                raise RuntimeError(f"Failed to start Copilot client: {str(e)}") from e
-
-            stack.push_async_callback(client.stop)
-
-            try:
-                options = CopilotProviderOptions(
-                    client=client,
-                    model=config.model,
-                    system_prompt=config.system_prompt,
-                    timeout=config.timeout,
-                    tools=config.tools,
-                )
-                provider = CopilotProvider(options)
-            except Exception as e:
-                raise RuntimeError(f"Failed to initialize Copilot provider: {str(e)}") from e
-
-            stack.pop_all()
-            return provider
-
-    raise ValueError(f"Unknown provider type: {config.provider_type}")
+    provider_class = get_provider_class(options.type)
+    return provider_class(options, system_prompt=system_prompt, tools=tools)
 
 
-async def dispose_ai_provider(provider: BaseAIProvider):
-    """Dispose provider-owned resources in reverse lifecycle order.
+async def dispose_ai_provider(provider: BaseAIProvider) -> None:
+    """Stop a provider and release all its resources.
 
     Args:
         provider: Provider instance to dispose.
-
-    Returns:
-        None
-
-    Raises:
-        ValueError: If the provider type is unsupported.
-        RuntimeError: If any cleanup step fails.
     """
 
-    try:
-        async with AsyncExitStack() as stack:
-            if isinstance(provider, CopilotProvider):
-                copilot_provider_client = provider.options.client
-                if copilot_provider_client is not None:
-                    stack.push_async_callback(copilot_provider_client.stop)
-            else:
-                raise ValueError(f"Unknown provider type: {type(provider)}")
-
-            stack.push_async_callback(provider.dispose_session)
-    except ValueError:
-        raise
-    except Exception as e:
-        raise RuntimeError(f"Failed to dispose AI provider: {str(e)}") from e
+    await provider.stop()
 
 
 @asynccontextmanager
-async def managed_ai_provider(config: AIProviderConfig):
-    """Provide a managed provider lifecycle via async context manager.
+async def managed_ai_provider(
+    options: BaseAIOptions,
+    *,
+    system_prompt: str,
+    tools: list[BaseTool],
+):
+    """Async context manager that manages the full provider lifecycle.
+
+    Starts the provider on entry and stops it on exit (including on exception).
 
     Args:
-        config: Provider creation settings.
+        options: Provider options.
+        system_prompt: System prompt passed to the model at session initialisation.
+        tools: Provider-agnostic tool definitions to register with the session.
 
     Yields:
-        A created provider instance ready for use.
+        A started :class:`BaseAIProvider` instance ready for use.
 
     Raises:
-        ValueError: If the provider type is unsupported.
-        RuntimeError: If provider creation or disposal fails.
+        KeyError: If no provider is registered for ``options.type``.
+        RuntimeError: If provider startup or teardown fails.
     """
 
-    provider = await create_ai_provider(config)
+    provider = create_ai_provider(options, system_prompt=system_prompt, tools=tools)
     try:
-        await provider.initialize_session()
+        await provider.start()
         yield provider
     finally:
-        await dispose_ai_provider(provider)
+        await provider.stop()
