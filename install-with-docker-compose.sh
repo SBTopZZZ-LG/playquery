@@ -74,7 +74,7 @@ prompt_secret() {
 
   while [[ -z "$value" ]]; do
     read -r -s -p "$prompt: " value < "$TTY_DEVICE"
-    printf '\n'
+    printf '\n' > "$TTY_DEVICE"
   done
 
   printf '%s' "$value"
