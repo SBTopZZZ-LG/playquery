@@ -1,5 +1,6 @@
 """Factory for creating AI provider instances based on a generic configuration."""
 
+import os
 from contextlib import AsyncExitStack, asynccontextmanager
 from dataclasses import dataclass, field
 from enum import Enum
@@ -53,7 +54,11 @@ async def create_ai_provider(config: AIProviderConfig) -> BaseAIProvider:
 
     if config.provider_type == ProviderType.COPILOT:
         async with AsyncExitStack() as stack:
-            client = copilot.CopilotClient()
+            client = copilot.CopilotClient(
+                config=copilot.SubprocessConfig(
+                    github_token=os.environ.get("COPILOT_GITHUB_TOKEN", "").strip() or None,
+                )
+            )
 
             try:
                 await client.start()
