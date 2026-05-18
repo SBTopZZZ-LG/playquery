@@ -21,6 +21,7 @@ known-first-party = [
   "agents",
   "ai_providers",
   "config",
+  "parsers",
   "scraper",
   "search_engine",
   "tools",
