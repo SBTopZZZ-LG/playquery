@@ -6,10 +6,12 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
+# Install the shared libraries Chromium needs at runtime inside the container.
+# Patchright launches the browser in headless mode, but Chromium still depends
+# on these graphics, font, accessibility, and TLS/system integration packages.
 RUN apt-get update && apt-get install -y --no-install-recommends \
   ca-certificates \
   fonts-liberation \
-  git \
   libasound2 \
   libatk-bridge2.0-0 \
   libatk1.0-0 \
@@ -36,9 +38,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY requirements.txt ./
 
-RUN pip install --upgrade pip \
+RUN apt-get update && apt-get install -y --no-install-recommends \
+  git \
+  && pip install --upgrade pip \
   && pip install -r requirements.txt \
-  && python -m patchright install chromium
+  && python -m patchright install chromium \
+  && apt-get purge -y --auto-remove git \
+  && rm -rf /var/lib/apt/lists/*
 
 COPY . .
 
