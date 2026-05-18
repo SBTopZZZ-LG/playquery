@@ -6,6 +6,7 @@ REPO_OWNER="SBTopZZZ-LG"
 REPO_NAME="playquery"
 RAW_BASE="https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}"
 API_BASE="https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}"
+TTY_DEVICE="/dev/tty"
 
 require_command() {
   if ! command -v "$1" >/dev/null 2>&1; then
@@ -47,13 +48,18 @@ prompt_default() {
   local default_value="$2"
   local value
 
+  if [[ ! -r "$TTY_DEVICE" ]]; then
+    printf 'Interactive input requires a tty. Set the environment variables before running the installer.\n' >&2
+    exit 1
+  fi
+
   if [[ -n "$default_value" ]]; then
-    read -r -p "$prompt [$default_value]: " value
+    read -r -p "$prompt [$default_value]: " value < "$TTY_DEVICE"
     printf '%s' "${value:-$default_value}"
     return
   fi
 
-  read -r -p "$prompt: " value
+  read -r -p "$prompt: " value < "$TTY_DEVICE"
   printf '%s' "$value"
 }
 
@@ -61,8 +67,13 @@ prompt_secret() {
   local prompt="$1"
   local value=""
 
+  if [[ ! -r "$TTY_DEVICE" ]]; then
+    printf 'Interactive secret input requires a tty. Set PLAYQUERY_AI_GITHUB_TOKEN before running the installer.\n' >&2
+    exit 1
+  fi
+
   while [[ -z "$value" ]]; do
-    read -r -s -p "$prompt: " value
+    read -r -s -p "$prompt: " value < "$TTY_DEVICE"
     printf '\n'
   done
 
