@@ -3,6 +3,12 @@ name: Reusable CD
 on:
   workflow_call:
   workflow_dispatch:
+    inputs:
+      force_build:
+        description: Force the Docker image build even if the version tag already exists
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: write
@@ -14,6 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       skip: ${{ steps.release.outputs.skip }}
+      release_exists: ${{ steps.release.outputs.release_exists }}
       version: ${{ steps.project.outputs.version }}
       version_tag: ${{ steps.release.outputs.version_tag }}
       image: ${{ steps.project.outputs.image }}
@@ -53,6 +60,7 @@ jobs:
         id: release
         shell: bash
         env:
+          FORCE_BUILD: ${{ github.event_name == 'workflow_dispatch' && inputs.force_build || false }}
           VERSION: ${{ steps.project.outputs.version }}
           GITHUB_SHA: ${{ github.sha }}
           GITHUB_REPOSITORY: ${{ github.repository }}
@@ -63,10 +71,17 @@ jobs:
           echo "version_tag=${version_tag}" >> "$GITHUB_OUTPUT"
 
           if git rev-parse -q --verify "refs/tags/${version_tag}" >/dev/null; then
+            echo "release_exists=true" >> "$GITHUB_OUTPUT"
+            if [[ "$FORCE_BUILD" == "true" ]]; then
+              echo "skip=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+
             echo "skip=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
+          echo "release_exists=false" >> "$GITHUB_OUTPUT"
           previous_tag="$(git tag --list 'v*' --sort=-v:refname | head -n1 || true)"
           echo "skip=false" >> "$GITHUB_OUTPUT"
           echo "previous_tag=${previous_tag}" >> "$GITHUB_OUTPUT"
@@ -149,7 +164,7 @@ jobs:
           PY
 
       - name: Create GitHub release
-        if: steps.release.outputs.skip != 'true'
+        if: steps.release.outputs.skip != 'true' && steps.release.outputs.release_exists != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION_TAG: ${{ steps.release.outputs.version_tag }}
