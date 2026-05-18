@@ -159,6 +159,7 @@ class CopilotProvider(BaseAIProvider[CopilotOptions]):
         }
         if sdk_tools:
             session_config["tools"] = sdk_tools
+            session_config["available_tools"] = [t.name for t in sdk_tools]
 
         self._session = await self._client.create_session(**session_config)
 
