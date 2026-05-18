@@ -2,7 +2,6 @@
 
 import asyncio
 import itertools
-import os
 import sys
 from typing import Any
 
@@ -16,8 +15,8 @@ from ai_providers import (
     managed_ai_provider,
 )
 from core import PlayQueryService
-from scraper.patchright import PatchrightOptions, PatchrightScraper
-from search_engine.searxng import SearXNGOptions, SearXNGSearchEngine
+from scraper import load_scraper
+from search_engine import load_engine
 
 _BRAILLE = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
 
@@ -80,10 +79,8 @@ def _with_logging(tool: BaseTool) -> BaseTool:
 async def main() -> None:
     """Start the PlayQuery agent and run an interactive query loop."""
 
-    engine = SearXNGSearchEngine(
-        SearXNGOptions(base_url=os.getenv("SEARXNG_BASE_URL", "http://localhost:8080"))  # type: ignore
-    )
-    scraper = PatchrightScraper(PatchrightOptions())
+    engine = load_engine()
+    scraper = load_scraper()
     service = PlayQueryService(engine=engine, scraper=scraper)
     agent = PlayQueryAgent(service)
 
