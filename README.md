@@ -8,7 +8,7 @@ The server currently exposes a single MCP tool, `ask_internet`, which searches f
 
 - `searxng` for search
 - `patchright` for page loading and scraping
-- GitHub Copilot SDK for the AI session
+- An AI provider SDK, currently GitHub Copilot SDK
 - FastMCP for MCP server transport support
 
 ## Requirements
@@ -16,7 +16,7 @@ The server currently exposes a single MCP tool, `ask_internet`, which searches f
 - Python 3.11+
 - A reachable SearXNG instance
 - Browser dependencies for Patchright
-- GitHub authentication for the Copilot provider when required
+- Authentication for AI providers that require it, such as GitHub Copilot
 
 ## Configuration
 
@@ -24,7 +24,7 @@ Configuration is loaded from `playquery.yaml` and can be overridden with `PLAYQU
 
 The main sections are:
 
-- `ai`: provider type, model, timeout, and optional GitHub token
+- `ai`: provider type, model, timeout, and optional provider-specific authentication settings
 - `search_engine`: search backend configuration
 - `scraper`: scraper backend configuration
 
@@ -125,7 +125,7 @@ PlayQuery reads configuration from `playquery.yaml`, then applies environment-va
 | Variable | Purpose | Possible values | Default |
 | --- | --- | --- | --- |
 | `PLAYQUERY_AI_TYPE` | Selects the AI provider backend. | `copilot` | `copilot` |
-| `PLAYQUERY_AI_MODEL` | Model identifier passed to the Copilot session. | Any non-empty Copilot-supported model name, for example `claude-haiku-4.5` or `claude-sonnet-4.6` | `claude-sonnet-4.6` in code, `claude-haiku-4.5` in the bundled sample config and prod compose |
+| `PLAYQUERY_AI_MODEL` | Model identifier passed to the configured AI provider session. | Any non-empty AI provider supported model name, for example `claude-haiku-4.5` or `claude-sonnet-4.6` | `claude-sonnet-4.6` in code, `claude-haiku-4.5` in the bundled sample config and prod compose |
 | `PLAYQUERY_AI_TIMEOUT` | AI request timeout in seconds. | Any positive number | `300.0` |
 | `PLAYQUERY_AI_GITHUB_TOKEN` | GitHub token used for Copilot auth when provided. | Empty/unset, or any valid GitHub token string | unset |
 | `PLAYQUERY_SEARCH_ENGINE_TYPE` | Selects the search backend. | `searxng` | `searxng` |
@@ -170,7 +170,7 @@ export PLAYQUERY_MCP_CORS_ORIGINS=http://localhost:3000
 - `main.py`: MCP server entrypoint
 - `core/`: orchestration service
 - `agents/`: agent definitions and tool exposure
-- `ai_providers/`: provider abstraction and Copilot integration
+- `ai_providers/`: provider abstraction and provider integrations
 - `search_engine/`: search backends
 - `scraper/`: scraping backends
 - `parsers/`: HTML parsing and content extraction
