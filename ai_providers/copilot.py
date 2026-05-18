@@ -54,7 +54,7 @@ def _make_sdk_handler(tool: BaseTool):
             result = tool.handler(our_inv)
             if inspect.isawaitable(result):
                 result = await result
-        except Exception as exc:  # noqa: BLE001  # broad catch is intentional — tool handlers may raise anything
+        except Exception as exc:  # pylint: disable=broad-except
             return SDKToolResult(
                 text_result_for_llm="Tool execution raised an unexpected error.",
                 result_type="failure",
