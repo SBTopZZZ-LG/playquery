@@ -2,6 +2,8 @@
 
 install:
 	pip install -r requirements.txt
+	pip install pre-commit
+	pre-commit install
 	.venv/bin/python -m patchright install chromium
 
 run:
