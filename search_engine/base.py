@@ -46,6 +46,10 @@ class BaseSearchEngine(ABC, Generic[T, R]):
         self.options = options
 
     @abstractmethod
+    def default_search_options(self) -> R:
+        """Return a default per-search options instance for this engine."""
+
+    @abstractmethod
     async def search(self, query: str, options: R) -> list[SearchEngineResult]:
         """
         Perform a search with the given query.

@@ -50,6 +50,9 @@ class PatchrightScrapeOptions(BaseScrapeOptions):
 class PatchrightScraper(BaseScraper[PatchrightOptions, PatchrightScrapeOptions]):
     """Scraper implementation backed by Patchright (stealth Playwright)."""
 
+    def default_scrape_options(self) -> PatchrightScrapeOptions:
+        return PatchrightScrapeOptions()
+
     async def scrape(self, url: str, options: PatchrightScrapeOptions) -> ScraperResult:
         """Navigate to *url* and return the full page HTML.
 

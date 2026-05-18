@@ -49,6 +49,10 @@ class BaseScraper(ABC, Generic[T, R]):
         self.options = options
 
     @abstractmethod
+    def default_scrape_options(self) -> R:
+        """Return a default per-scrape options instance for this scraper."""
+
+    @abstractmethod
     async def scrape(self, url: str, options: R) -> ScraperResult:
         """Scrape the given URL and return the raw page DOM.
 

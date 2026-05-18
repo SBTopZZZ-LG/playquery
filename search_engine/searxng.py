@@ -79,6 +79,9 @@ def _to_search_engine_result(result: Any) -> SearchEngineResult:
 class SearXNGSearchEngine(BaseSearchEngine[SearXNGOptions, SearXNGSearchOptions]):
     """SearXNG search engine implementation."""
 
+    def default_search_options(self) -> SearXNGSearchOptions:
+        return SearXNGSearchOptions()
+
     async def search(self, query: str, options: SearXNGSearchOptions) -> list[SearchEngineResult]:
         base_config = SearXNGBaseConfiguration(
             base_url=str(self.options.base_url),
