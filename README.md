@@ -113,6 +113,12 @@ For a hosted-style installation that pulls the published image from GHCR instead
 curl -fsSL https://raw.githubusercontent.com/SBTopZZZ-LG/playquery/main/install-with-docker-compose.sh | bash
 ```
 
+On Windows PowerShell, use:
+
+```powershell
+irm https://raw.githubusercontent.com/SBTopZZZ-LG/playquery/main/install-with-docker-compose.ps1 | iex
+```
+
 The installer:
 
 - prompts for the required environment values
@@ -158,7 +164,7 @@ These variables are used by the installer script or the production Compose file 
 
 | Variable | Purpose | Possible values | Default |
 | --- | --- | --- | --- |
-| `PLAYQUERY_INSTALL_DIR` | Target directory created by `install-with-docker-compose.sh`. | Any writable path | prompted interactively |
+| `PLAYQUERY_INSTALL_DIR` | Target directory created by the install script. | Any writable path | prompted interactively |
 | `PLAYQUERY_RELEASE_REF` | Git ref the installer should download from. | Any existing branch, tag, or commit SHA | latest release tag if available, otherwise `main` |
 | `PLAYQUERY_IMAGE_TAG` | Container tag used by [docker-compose.prod.yaml](docker-compose.prod.yaml). | Any published image tag, such as `latest`, `v1.0.0`, or a SHA tag | `latest` |
 | `SEARXNG_BASE_URL` | Base URL advertised to the SearXNG container in Compose. | Any reachable URL for that container, typically `http://searxng:8080` | `http://searxng:8080` |
