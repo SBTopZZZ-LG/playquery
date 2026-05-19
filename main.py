@@ -13,6 +13,7 @@ from agents import PlayQueryAgent
 from ai_providers import managed_ai_provider
 from config import PlayQueryConfig, load_config
 from core import PlayQueryService
+from logger import BaseLogger, configure_logger
 from scraper import load_scraper
 from search_engine import load_engine
 
@@ -20,6 +21,7 @@ from search_engine import load_engine
 @dataclass
 class _AppContext:
     config: PlayQueryConfig
+    logger: BaseLogger
     service: PlayQueryService
     agent: PlayQueryAgent
 
@@ -27,11 +29,18 @@ class _AppContext:
 @asynccontextmanager
 async def _lifespan(_: FastMCP) -> AsyncIterator[_AppContext]:
     config = load_config()
-    engine = load_engine()
-    scraper = load_scraper()
-    service = PlayQueryService(engine=engine, scraper=scraper)
-    agent = PlayQueryAgent(service)
-    yield _AppContext(config=config, service=service, agent=agent)
+    logger = configure_logger(config.logging)
+    logger.debug("Loaded PlayQuery configuration")
+    engine = load_engine(config=config, logger=logger.child("search_engine"))
+    scraper = load_scraper(config=config, logger=logger.child("scraper"))
+    service = PlayQueryService(
+        engine=engine,
+        scraper=scraper,
+        logger=logger.child("core.service"),
+    )
+    agent = PlayQueryAgent(service, logger.child("agents.playquery"))
+    logger.debug("Application lifespan initialized")
+    yield _AppContext(config=config, logger=logger, service=service, agent=agent)
 
 
 def _parse_bool_env(name: str, default: bool) -> bool:
@@ -102,14 +111,21 @@ async def ask_internet(query: str, ctx: Context) -> str:  # type: ignore[type-ar
         query: The question or research topic to investigate.
     """
     app: _AppContext = ctx.request_context.lifespan_context
+    app.logger.debug("Received ask_internet request", query=query)
     async with managed_ai_provider(
         app.config.ai,
+        logger=app.logger.child("ai_providers"),
         system_prompt=app.agent.system_prompt,
         tools=app.agent.tools,
     ) as provider:
         started_at = perf_counter()
         response = await provider.query(query)
         duration_seconds = perf_counter() - started_at
+        app.logger.debug(
+            "Completed ask_internet request",
+            query=query,
+            duration_seconds=round(duration_seconds, 3),
+        )
         return f"{response}\n\nResponse time: {duration_seconds:.1f}s"
 
 

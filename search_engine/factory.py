@@ -1,12 +1,25 @@
 """Factory for loading and instantiating search engines from configuration."""
 
+from __future__ import annotations
+
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+from logger import BaseLogger
 
 from .base import BaseSearchEngine
 from .registry import get_engine_class
 
+if TYPE_CHECKING:
+    from config import PlayQueryConfig
 
-def load_engine(path: str | Path = "playquery.yaml") -> BaseSearchEngine:
+
+def load_engine(
+    path: str | Path = "playquery.yaml",
+    *,
+    config: PlayQueryConfig | None = None,
+    logger: BaseLogger,
+) -> BaseSearchEngine:
     """Load and instantiate the configured search engine.
 
     Configuration is resolved in priority order:
@@ -15,6 +28,8 @@ def load_engine(path: str | Path = "playquery.yaml") -> BaseSearchEngine:
     Args:
         path: Path to the YAML configuration file. Ignored if all required
             settings are supplied via environment variables.
+        config: Pre-loaded application config. When provided, *path* is ignored.
+        logger: Logger to bind to the created search engine instance.
 
     Returns:
         A fully configured search engine instance.
@@ -23,8 +38,16 @@ def load_engine(path: str | Path = "playquery.yaml") -> BaseSearchEngine:
         pydantic.ValidationError: If the merged configuration is invalid.
         KeyError: If the engine type is not registered.
     """
-    from config import load_config  # imported here to avoid circular init-time import
+    if config is None:
+        from config import load_config
 
-    config = load_config(path)
-    engine_class = get_engine_class(config.search_engine.type)
-    return engine_class(config.search_engine)
+        active_config = load_config(path)
+    else:
+        active_config = config
+    engine_class = get_engine_class(active_config.search_engine.type)
+    logger.debug(
+        "Loading search engine",
+        engine_type=active_config.search_engine.type,
+        engine_class=engine_class.__name__,
+    )
+    return engine_class(active_config.search_engine, logger)

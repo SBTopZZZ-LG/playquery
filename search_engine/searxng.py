@@ -83,6 +83,11 @@ class SearXNGSearchEngine(BaseSearchEngine[SearXNGOptions, SearXNGSearchOptions]
         return SearXNGSearchOptions()
 
     async def search(self, query: str, options: SearXNGSearchOptions) -> list[SearchEngineResult]:
+        self.logger.debug(
+            "Executing SearXNG search",
+            query=query,
+            base_url=str(self.options.base_url),
+        )
         base_config = SearXNGBaseConfiguration(
             base_url=str(self.options.base_url),
             user_agent=self.options.user_agent,
@@ -99,4 +104,6 @@ class SearXNGSearchEngine(BaseSearchEngine[SearXNGOptions, SearXNGSearchOptions]
         )
         client = SearXNG(base_configuration=base_config)
         response = await client.search(search_configuration=search_config)
-        return [_to_search_engine_result(r) for r in response.search_results]
+        results = [_to_search_engine_result(r) for r in response.search_results]
+        self.logger.debug("SearXNG search completed", query=query, result_count=len(results))
+        return results

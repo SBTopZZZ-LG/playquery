@@ -10,9 +10,10 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from ai_providers.config import AIConfig
+from logger import LoggingConfig
 from scraper.config import ScraperConfig
 from search_engine.config import SearchEngineConfig
 
@@ -23,6 +24,7 @@ class PlayQueryConfig(BaseModel):
     search_engine: SearchEngineConfig
     scraper: ScraperConfig | None = None
     ai: AIConfig
+    logging: LoggingConfig = Field(default_factory=LoggingConfig)
 
 
 # ---------------------------------------------------------------------------
@@ -42,6 +44,7 @@ def _deep_set(d: dict[str, Any], path: tuple[str, ...], value: Any) -> None:
 
 # Each entry: (env_var_name, config_path_tuple, value_coercion_fn)
 _ENV_MAP: list[tuple[str, tuple[str, ...], Callable[[str], Any]]] = [
+    ("PLAYQUERY_LOGGING_LEVEL", ("logging", "level"), str),
     ("PLAYQUERY_SEARCH_ENGINE_TYPE", ("search_engine", "type"), str),
     ("PLAYQUERY_SEARCH_ENGINE_BASE_URL", ("search_engine", "base_url"), str),
     ("PLAYQUERY_SEARCH_ENGINE_USER_AGENT", ("search_engine", "user_agent"), str),

@@ -6,9 +6,12 @@ import random
 from collections import defaultdict
 from urllib.parse import urlparse
 
+from logger import BaseLogger
 from parsers import ParseResult, parse
 from scraper.base import BaseScraper
 from search_engine.base import BaseSearchEngine, SearchEngineResult
+
+_NO_SCRAPER_ERROR = "No scraper configured in PlayQueryService."
 
 
 class PlayQueryService:
@@ -17,10 +20,17 @@ class PlayQueryService:
     def __init__(
         self,
         engine: BaseSearchEngine,
+        logger: BaseLogger,
         scraper: BaseScraper | None = None,
     ) -> None:
         self._engine = engine
         self._scraper = scraper
+        self._logger = logger
+        self._logger.debug(
+            "Initialized PlayQueryService",
+            engine_type=type(engine).__name__,
+            scraper_type=type(scraper).__name__ if scraper is not None else None,
+        )
 
     async def search(
         self,
@@ -30,12 +40,24 @@ class PlayQueryService:
     ) -> list[SearchEngineResult]:
         """Perform a search query and return a list of search results."""
 
-        # TODO (post-MVP): pass max_results into engine-level options once
-        # SearXNG (and future engines) expose a count/limit parameter.
+        # max_results is currently enforced at the service layer because the
+        # engine option types do not yet expose a shared count/limit field.
+        self._logger.debug(
+            "Starting search request",
+            query=query,
+            max_results=max_results,
+        )
         default_opts = self._engine.default_search_options()
         opts = dataclasses.replace(default_opts, **(options or {}))
         results = await self._engine.search(query, opts)
-        return results[:max_results]
+        trimmed_results = results[:max_results]
+        self._logger.debug(
+            "Completed search request",
+            query=query,
+            returned_count=len(trimmed_results),
+            raw_count=len(results),
+        )
+        return trimmed_results
 
     async def scrape(
         self,
@@ -45,11 +67,19 @@ class PlayQueryService:
         """Scrape the given URL and return the parsed main-content text."""
 
         if self._scraper is None:
-            raise RuntimeError("No scraper configured in PlayQueryService.")
+            raise RuntimeError(_NO_SCRAPER_ERROR)
+        self._logger.debug("Starting scrape request", url=url)
         default_opts = self._scraper.default_scrape_options()
         opts = dataclasses.replace(default_opts, **(options or {}))
         result = await self._scraper.scrape(url, opts)
-        return parse(result.html, result.final_url or url)
+        parsed = parse(result.html, result.final_url or url)
+        self._logger.debug(
+            "Completed scrape request",
+            url=url,
+            final_url=result.final_url or url,
+            title=parsed.title,
+        )
+        return parsed
 
     async def batch_scrape(
         self,
@@ -75,7 +105,14 @@ class PlayQueryService:
                 detection.
         """
         if self._scraper is None:
-            raise RuntimeError("No scraper configured in PlayQueryService.")
+            raise RuntimeError(_NO_SCRAPER_ERROR)
+
+        self._logger.debug(
+            "Starting batch scrape",
+            url_count=len(urls),
+            same_host_delay=same_host_delay,
+            same_host_delay_jitter=same_host_delay_jitter,
+        )
 
         # Group URLs by hostname, preserving per-group insertion order.
         groups: dict[str, list[tuple[int, str]]] = defaultdict(list)
@@ -87,13 +124,24 @@ class PlayQueryService:
 
         async def _scrape_group(indexed_urls: list[tuple[int, str]]) -> None:
             for j, (original_idx, url) in enumerate(indexed_urls):
+                self._logger.debug(
+                    "Scraping URL within host group", url=url, group_size=len(indexed_urls)
+                )
                 results[original_idx] = await self.scrape(url, options)
                 if j < len(indexed_urls) - 1:
                     delay = same_host_delay + random.uniform(0, same_host_delay_jitter)
+                    self._logger.debug("Sleeping between same-host scrapes", url=url, delay=delay)
                     await asyncio.sleep(delay)
 
         await asyncio.gather(*(_scrape_group(group) for group in groups.values()))
-        return [r for r in results if r is not None]
+        parsed_results = [r for r in results if r is not None]
+        self._logger.debug(
+            "Completed batch scrape",
+            url_count=len(urls),
+            group_count=len(groups),
+            result_count=len(parsed_results),
+        )
+        return parsed_results
 
     async def batch_search(
         self,
@@ -111,8 +159,13 @@ class PlayQueryService:
         Returns:
             A dict mapping each query string to its list of :class:`SearchEngineResult`.
         """
+        self._logger.debug(
+            "Starting batch search", query_count=len(queries), max_results=max_results
+        )
         results = await asyncio.gather(*[self.search(q, max_results, options) for q in queries])
-        return dict(zip(queries, results, strict=True))
+        payload = dict(zip(queries, results, strict=True))
+        self._logger.debug("Completed batch search", query_count=len(queries))
+        return payload
 
     async def search_and_scrape(
         self,
@@ -126,7 +179,14 @@ class PlayQueryService:
         """
 
         if self._scraper is None:
-            raise RuntimeError("No scraper configured in PlayQueryService.")
+            raise RuntimeError(_NO_SCRAPER_ERROR)
+        self._logger.debug("Starting search and scrape", query=query, max_results=max_results)
         search_results = await self.search(query, max_results, search_options)
         tasks = [self.scrape(r.url, scrape_options) for r in search_results]
-        return list(await asyncio.gather(*tasks))
+        parsed_results = list(await asyncio.gather(*tasks))
+        self._logger.debug(
+            "Completed search and scrape",
+            query=query,
+            result_count=len(parsed_results),
+        )
+        return parsed_results

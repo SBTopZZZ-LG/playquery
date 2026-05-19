@@ -6,12 +6,13 @@ from pydantic import Field
 
 from ai_providers import BaseTool, define_tool
 from core.service import PlayQueryService
+from logger import BaseLogger
 from search_engine.base import SearchEngineResult
 
 from ._utils import make_params_model, sanitize_schema
 
 
-def make_batch_search_tool(service: PlayQueryService) -> BaseTool:
+def make_batch_search_tool(service: PlayQueryService, logger: BaseLogger) -> BaseTool:
     """Return a batch-search tool bound to *service*.
 
     The tool accepts a list of query strings and runs all of them in parallel,
@@ -34,6 +35,11 @@ def make_batch_search_tool(service: PlayQueryService) -> BaseTool:
 
     async def _handler(params) -> dict[str, list[SearchEngineResult]]:  # type: ignore[no-untyped-def]
         engine_options = {f.name: getattr(params, f.name) for f in dataclasses.fields(options_type)}
+        logger.debug(
+            "Invoking batch_search tool",
+            query_count=len(params.queries),
+            max_results=params.max_results,
+        )
         return await service.batch_search(params.queries, params.max_results, engine_options)
 
     _handler.__annotations__ = {

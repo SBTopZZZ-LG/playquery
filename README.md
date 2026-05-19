@@ -24,12 +24,14 @@ Configuration is loaded from `playquery.yaml` and can be overridden with `PLAYQU
 
 The main sections are:
 
+- `logging`: runtime logging level
 - `ai`: provider type, model, timeout, and optional provider-specific authentication settings
 - `search_engine`: search backend configuration
 - `scraper`: scraper backend configuration
 
 The bundled example config uses:
 
+- `DEBUG` logging with a stdlib `StreamHandler`
 - `copilot` as the AI provider
 - `searxng` as the search engine
 - `patchright` as the scraper
@@ -124,6 +126,7 @@ PlayQuery reads configuration from `playquery.yaml`, then applies environment-va
 
 | Variable | Purpose | Possible values | Default |
 | --- | --- | --- | --- |
+| `PLAYQUERY_LOGGING_LEVEL` | Logging level for the application logger. | `DEBUG` | `DEBUG` |
 | `PLAYQUERY_AI_TYPE` | Selects the AI provider backend. | `copilot` | `copilot` |
 | `PLAYQUERY_AI_MODEL` | Model identifier passed to the configured AI provider session. | Any non-empty AI provider supported model name, for example `claude-haiku-4.5` or `claude-sonnet-4.6` | `claude-sonnet-4.6` in code, `claude-haiku-4.5` in the bundled sample config and prod compose |
 | `PLAYQUERY_AI_TIMEOUT` | AI request timeout in seconds. | Any positive number | `300.0` |
@@ -161,6 +164,7 @@ Example overrides:
 ```bash
 export PLAYQUERY_SEARCH_ENGINE_BASE_URL=http://localhost:8080
 export PLAYQUERY_AI_GITHUB_TOKEN=your_token_here
+export PLAYQUERY_LOGGING_LEVEL=DEBUG
 export PLAYQUERY_MCP_TRANSPORT=streamable-http
 export PLAYQUERY_MCP_CORS_ORIGINS=http://localhost:3000
 ```

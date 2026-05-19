@@ -8,6 +8,8 @@ from typing import Any, Generic, Literal, TypedDict, TypeVar
 
 from pydantic import BaseModel
 
+from logger import BaseLogger
+
 
 class JSONParseError(Exception):
     """Raised when the AI fails to return valid JSON after all retries."""
@@ -90,19 +92,29 @@ class BaseAIProvider(ABC, Generic[T]):
     """Abstract base class for AI providers."""
 
     options: T
+    logger: BaseLogger
     _system_prompt: str
     _tools: list[BaseTool]
 
-    def __init__(self, options: T, *, system_prompt: str, tools: list[BaseTool]):
+    def __init__(
+        self,
+        options: T,
+        *,
+        logger: BaseLogger,
+        system_prompt: str,
+        tools: list[BaseTool],
+    ):
         """Initialize the base provider.
 
         Args:
             options: Provider options.
+            logger: Component logger instance.
             system_prompt: System prompt passed to the model at session initialisation.
             tools: Provider-agnostic tool definitions to register with the session.
         """
 
         self.options = options
+        self.logger = logger
         self._system_prompt = system_prompt
         self._tools = tools
 

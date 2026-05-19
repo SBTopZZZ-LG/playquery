@@ -77,7 +77,14 @@ class CopilotProvider(BaseAIProvider[CopilotOptions]):
     _client: CopilotClient | None
     _session: CopilotSession | None
 
-    def __init__(self, options: CopilotOptions, *, system_prompt: str, tools: list[BaseTool]):
+    def __init__(
+        self,
+        options: CopilotOptions,
+        *,
+        logger,
+        system_prompt: str,
+        tools: list[BaseTool],
+    ):
         """Initialize the Copilot provider.
 
         Args:
@@ -86,7 +93,7 @@ class CopilotProvider(BaseAIProvider[CopilotOptions]):
             tools: Tool definitions to register with the session.
         """
 
-        super().__init__(options, system_prompt=system_prompt, tools=tools)
+        super().__init__(options, logger=logger, system_prompt=system_prompt, tools=tools)
         self._client = None
         self._session = None
 
@@ -97,6 +104,7 @@ class CopilotProvider(BaseAIProvider[CopilotOptions]):
             RuntimeError: If the client fails to start.
         """
 
+        self.logger.debug("Starting Copilot provider", model=self.options.model)
         self._client = copilot.CopilotClient(
             config=copilot.SubprocessConfig(github_token=self.options.github_token)
         )
@@ -114,6 +122,7 @@ class CopilotProvider(BaseAIProvider[CopilotOptions]):
             RuntimeError: If client teardown fails.
         """
 
+        self.logger.debug("Stopping Copilot provider")
         await self._dispose_session()
         if self._client is not None:
             try:
@@ -139,7 +148,7 @@ class CopilotProvider(BaseAIProvider[CopilotOptions]):
             raise ValueError("Timeout must be a positive number.")
 
         if self._session is not None:
-            print("Warning: Copilot session already initialised. Reinitialising.")
+            self.logger.debug("Copilot session already initialized; reinitializing")
             await self._dispose_session()
 
         sdk_tools = [
@@ -161,6 +170,7 @@ class CopilotProvider(BaseAIProvider[CopilotOptions]):
             session_config["tools"] = sdk_tools
             session_config["available_tools"] = [t.name for t in sdk_tools]
 
+        self.logger.debug("Creating Copilot session", tool_count=len(sdk_tools))
         self._session = await self._client.create_session(**session_config)
 
     async def _dispose_session(self) -> None:
@@ -168,6 +178,7 @@ class CopilotProvider(BaseAIProvider[CopilotOptions]):
 
         if self._session is None:
             return
+        self.logger.debug("Disposing Copilot session")
         try:
             await self._session.destroy()
         except Exception as e:
@@ -192,6 +203,7 @@ class CopilotProvider(BaseAIProvider[CopilotOptions]):
         if self._session is None:
             raise ValueError("Copilot session is not initialised.")
 
+        self.logger.debug("Sending message to Copilot", message_length=len(message))
         response = await self._session.send_and_wait(message, timeout=self.options.timeout)
 
         if response is None:
@@ -203,4 +215,5 @@ class CopilotProvider(BaseAIProvider[CopilotOptions]):
         if isinstance(response.data, AssistantMessageData):
             response_content = response.data.content or ""
 
+        self.logger.debug("Received message from Copilot", response_length=len(response_content))
         return response_content

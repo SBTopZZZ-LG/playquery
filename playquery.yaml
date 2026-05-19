@@ -1,6 +1,15 @@
 # yaml-language-server: $schema=./playquery.schema.json
 
-# -─────────────────────────────────────────────
+# ─────────────────────────────────────────────
+#  Logging
+# ─────────────────────────────────────────────
+
+logging:
+  # Logging level for the application runtime.
+  # Debug is the only supported level for now.
+  level: DEBUG
+
+# ──────────────────────────────────────────────
 #  AI Provider
 # ──────────────────────────────────────────────
 

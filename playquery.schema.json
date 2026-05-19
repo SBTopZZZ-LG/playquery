@@ -35,6 +35,19 @@
       "title": "CopilotOptions",
       "type": "object"
     },
+    "LoggingConfig": {
+      "description": "Logging configuration for PlayQuery runtime output.",
+      "properties": {
+        "level": {
+          "const": "DEBUG",
+          "default": "DEBUG",
+          "title": "Level",
+          "type": "string"
+        }
+      },
+      "title": "LoggingConfig",
+      "type": "object"
+    },
     "PatchrightOptions": {
       "description": "Pydantic model for Patchright scraper configuration.",
       "properties": {
@@ -180,6 +193,9 @@
         }
       ],
       "title": "Ai"
+    },
+    "logging": {
+      "$ref": "#/$defs/LoggingConfig"
     }
   },
   "required": [

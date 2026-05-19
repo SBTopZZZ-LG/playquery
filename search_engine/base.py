@@ -6,6 +6,8 @@ from typing import Generic, TypeVar
 
 from pydantic import BaseModel
 
+from logger import BaseLogger
+
 
 class BaseSearchEngineOptions(BaseModel):
     """Base Pydantic model for search engine configuration options."""
@@ -35,15 +37,18 @@ class BaseSearchEngine(ABC, Generic[T, R]):
     """Abstract base class for search engine implementations."""
 
     options: T
+    logger: BaseLogger
 
-    def __init__(self, options: T):
+    def __init__(self, options: T, logger: BaseLogger):
         """Initialize the base search engine.
 
         Args:
             options: Search engine-specific options object.
+            logger: Component logger instance.
         """
 
         self.options = options
+        self.logger = logger
 
     @abstractmethod
     def default_search_options(self) -> R:

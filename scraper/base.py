@@ -6,6 +6,8 @@ from typing import Generic, TypeVar
 
 from pydantic import BaseModel
 
+from logger import BaseLogger
+
 
 class BaseScraperOptions(BaseModel):
     """Base Pydantic model for scraper configuration options."""
@@ -38,15 +40,18 @@ class BaseScraper(ABC, Generic[T, R]):
     """Abstract base class for scraper implementations."""
 
     options: T
+    logger: BaseLogger
 
-    def __init__(self, options: T):
+    def __init__(self, options: T, logger: BaseLogger):
         """Initialize the base scraper.
 
         Args:
             options: Scraper-specific configuration object.
+            logger: Component logger instance.
         """
 
         self.options = options
+        self.logger = logger
 
     @abstractmethod
     def default_scrape_options(self) -> R:

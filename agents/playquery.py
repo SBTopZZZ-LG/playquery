@@ -2,6 +2,7 @@
 
 from ai_providers import BaseTool
 from core.service import PlayQueryService
+from logger import BaseLogger
 from tools import make_batch_scrape_tool, make_batch_search_tool
 
 from .base import BaseAgent
@@ -80,8 +81,9 @@ class PlayQueryAgent(BaseAgent):
     system_prompt: str = _SYSTEM_PROMPT
     tools: list[BaseTool]
 
-    def __init__(self, service: PlayQueryService) -> None:
+    def __init__(self, service: PlayQueryService, logger: BaseLogger) -> None:
+        logger.debug("Initializing PlayQueryAgent")
         self.tools = [
-            make_batch_search_tool(service),
-            make_batch_scrape_tool(service),
+            make_batch_search_tool(service, logger.child("batch_search_tool")),
+            make_batch_scrape_tool(service, logger.child("batch_scrape_tool")),
         ]

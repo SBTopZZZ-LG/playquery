@@ -2,6 +2,8 @@
 
 from contextlib import asynccontextmanager
 
+from logger import BaseLogger
+
 from .base import BaseAIOptions, BaseAIProvider, BaseTool
 from .registry import get_provider_class
 
@@ -9,6 +11,7 @@ from .registry import get_provider_class
 def create_ai_provider(
     options: BaseAIOptions,
     *,
+    logger: BaseLogger,
     system_prompt: str,
     tools: list[BaseTool],
 ) -> BaseAIProvider:
@@ -31,7 +34,10 @@ def create_ai_provider(
     """
 
     provider_class = get_provider_class(options.type)
-    return provider_class(options, system_prompt=system_prompt, tools=tools)
+    logger.debug(
+        "Creating AI provider", provider_type=options.type, provider_class=provider_class.__name__
+    )
+    return provider_class(options, logger=logger, system_prompt=system_prompt, tools=tools)
 
 
 async def dispose_ai_provider(provider: BaseAIProvider) -> None:
@@ -48,6 +54,7 @@ async def dispose_ai_provider(provider: BaseAIProvider) -> None:
 async def managed_ai_provider(
     options: BaseAIOptions,
     *,
+    logger: BaseLogger,
     system_prompt: str,
     tools: list[BaseTool],
 ):
@@ -68,7 +75,12 @@ async def managed_ai_provider(
         RuntimeError: If provider startup or teardown fails.
     """
 
-    provider = create_ai_provider(options, system_prompt=system_prompt, tools=tools)
+    provider = create_ai_provider(
+        options,
+        logger=logger,
+        system_prompt=system_prompt,
+        tools=tools,
+    )
     try:
         await provider.start()
         yield provider

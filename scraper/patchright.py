@@ -67,6 +67,12 @@ class PatchrightScraper(BaseScraper[PatchrightOptions, PatchrightScrapeOptions])
             A ScraperResult with the raw HTML and the post-redirect final URL.
         """
         timeout_ms = (options.timeout or self.options.timeout) * 1000
+        self.logger.debug(
+            "Starting Patchright scrape",
+            url=url,
+            wait_until=options.wait_until,
+            timeout_ms=timeout_ms,
+        )
 
         async with async_playwright() as playwright:
             browser = await playwright.chromium.launch(
@@ -92,6 +98,13 @@ class PatchrightScraper(BaseScraper[PatchrightOptions, PatchrightScrapeOptions])
             finally:
                 await context.close()
                 await browser.close()
+
+        self.logger.debug(
+            "Completed Patchright scrape",
+            url=url,
+            final_url=final_url,
+            html_size=len(html),
+        )
 
         return ScraperResult(
             url=url,

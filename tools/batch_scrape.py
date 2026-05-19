@@ -6,12 +6,13 @@ from pydantic import Field
 
 from ai_providers import BaseTool, define_tool
 from core.service import PlayQueryService
+from logger import BaseLogger
 from parsers import ParseResult
 
 from ._utils import make_params_model, sanitize_schema
 
 
-def make_batch_scrape_tool(service: PlayQueryService) -> BaseTool:
+def make_batch_scrape_tool(service: PlayQueryService, logger: BaseLogger) -> BaseTool:
     """Return a batch-scrape tool bound to *service*.
 
     Accepts a list of URLs and delegates to :meth:`PlayQueryService.batch_scrape`,
@@ -39,6 +40,7 @@ def make_batch_scrape_tool(service: PlayQueryService) -> BaseTool:
 
     async def _handler(params) -> list[ParseResult]:  # type: ignore[no-untyped-def]
         scrape_options = {f.name: getattr(params, f.name) for f in dataclasses.fields(options_type)}
+        logger.debug("Invoking batch_scrape tool", url_count=len(params.urls))
         return await service.batch_scrape(params.urls, scrape_options)
 
     _handler.__annotations__ = {"params": batch_scrape_params, "return": list[ParseResult]}
