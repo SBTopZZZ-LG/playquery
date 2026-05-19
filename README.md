@@ -87,8 +87,12 @@ http://localhost:8000/mcp
 The repository includes a simple Compose stack for PlayQuery and SearXNG:
 
 ```bash
+export PLAYQUERY_AI_GITHUB_TOKEN=your_token_here
 docker-compose up -d --build
 ```
+
+The local image can include your local `playquery.yaml`. Runtime environment variables
+still take precedence over the baked config, followed by `playquery.yaml`, then code defaults.
 
 This starts:
 
