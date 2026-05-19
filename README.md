@@ -128,6 +128,33 @@ The installer:
 
 The production-oriented Compose file is [docker-compose.prod.yaml](docker-compose.prod.yaml) and uses the published GHCR image instead of a local build.
 
+## Run Published Image With Docker
+
+The following `docker run` commands use explicit `--env` flags, so the same commands
+work in both Bash and PowerShell.
+
+These examples only show the three most common container overrides: the MCP transport,
+the GitHub token for Copilot, and the search backend URL. For the full list of runtime
+variables, see [Environment Variables](README.md#environment-variables) below.
+
+### PlayQuery Only
+
+Use this when you already have a reachable SearXNG instance and want to run only PlayQuery:
+
+```text
+docker run --rm --name playquery -p 8000:8000 --env PLAYQUERY_MCP_TRANSPORT=streamable-http --env PLAYQUERY_AI_GITHUB_TOKEN=your_github_token_here --env PLAYQUERY_SEARCH_ENGINE_BASE_URL=http://your-searxng-host:8080 ghcr.io/sbtopzzz-lg/playquery:latest
+```
+
+### PlayQuery And SearXNG
+
+Use this when you want Docker to run both containers together without Compose. The SearXNG image version below matches [docker-compose.prod.yaml](docker-compose.prod.yaml).
+
+```text
+docker network create playquery-net
+docker run -d --name searxng --network playquery-net --restart unless-stopped searxng/searxng:2026.5.10-df1f24fb7
+docker run -d --name playquery --network playquery-net --restart unless-stopped -p 8000:8000 --env PLAYQUERY_MCP_TRANSPORT=streamable-http --env PLAYQUERY_AI_GITHUB_TOKEN=your_github_token_here --env PLAYQUERY_SEARCH_ENGINE_BASE_URL=http://searxng:8080 ghcr.io/sbtopzzz-lg/playquery:latest
+```
+
 ## Environment Variables
 
 PlayQuery reads configuration from `playquery.yaml`, then applies environment-variable overrides. The currently supported values below come from the active config models and transport setup in the codebase.
