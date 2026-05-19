@@ -12,6 +12,8 @@ from copilot.tools import ToolInvocation as SDKToolInvocation
 from copilot.tools import ToolResult as SDKToolResult
 from pydantic import Field
 
+from logger import BaseLogger, log_exceptions
+
 from .base import BaseAIOptions, BaseAIProvider, BaseTool
 from .registry import register_provider
 
@@ -81,10 +83,10 @@ class CopilotProvider(BaseAIProvider[CopilotOptions]):
         self,
         options: CopilotOptions,
         *,
-        logger,
+        logger: BaseLogger,
         system_prompt: str,
         tools: list[BaseTool],
-    ):
+    ) -> None:
         """Initialize the Copilot provider.
 
         Args:
@@ -97,6 +99,7 @@ class CopilotProvider(BaseAIProvider[CopilotOptions]):
         self._client = None
         self._session = None
 
+    @log_exceptions("Copilot provider start failed", logger_attr="logger")
     async def start(self) -> None:
         """Create and connect the Copilot client, then initialise a session.
 
@@ -110,11 +113,13 @@ class CopilotProvider(BaseAIProvider[CopilotOptions]):
         )
         try:
             await self._client.start()
-        except Exception as e:
-            raise RuntimeError(f"Failed to start Copilot client: {e}") from e
+        except Exception as exc:
+            self.logger.error("Failed to start Copilot client", exc_info=exc)
+            raise RuntimeError(f"Failed to start Copilot client: {exc}") from exc
 
         await self._initialize_session()
 
+    @log_exceptions("Copilot provider stop failed", logger_attr="logger")
     async def stop(self) -> None:
         """Dispose the session and stop the Copilot client.
 
@@ -127,11 +132,13 @@ class CopilotProvider(BaseAIProvider[CopilotOptions]):
         if self._client is not None:
             try:
                 await self._client.stop()
-            except Exception as e:
-                raise RuntimeError(f"Failed to stop Copilot client: {e}") from e
+            except Exception as exc:
+                self.logger.error("Failed to stop Copilot client", exc_info=exc)
+                raise RuntimeError(f"Failed to stop Copilot client: {exc}") from exc
             finally:
                 self._client = None
 
+    @log_exceptions("Copilot session initialization failed", logger_attr="logger")
     async def _initialize_session(self) -> None:
         """Initialise a Copilot session. Called internally by :meth:`start`.
 
@@ -148,7 +155,7 @@ class CopilotProvider(BaseAIProvider[CopilotOptions]):
             raise ValueError("Timeout must be a positive number.")
 
         if self._session is not None:
-            self.logger.debug("Copilot session already initialized; reinitializing")
+            self.logger.warning("Copilot session already initialized; reinitializing")
             await self._dispose_session()
 
         sdk_tools = [
@@ -169,10 +176,13 @@ class CopilotProvider(BaseAIProvider[CopilotOptions]):
         if sdk_tools:
             session_config["tools"] = sdk_tools
             session_config["available_tools"] = [t.name for t in sdk_tools]
+        else:
+            self.logger.warning("Creating Copilot session without any registered tools")
 
         self.logger.debug("Creating Copilot session", tool_count=len(sdk_tools))
         self._session = await self._client.create_session(**session_config)
 
+    @log_exceptions("Copilot session disposal failed", logger_attr="logger")
     async def _dispose_session(self) -> None:
         """Destroy the active session. Called internally by :meth:`stop`."""
 
@@ -181,11 +191,13 @@ class CopilotProvider(BaseAIProvider[CopilotOptions]):
         self.logger.debug("Disposing Copilot session")
         try:
             await self._session.destroy()
-        except Exception as e:
-            raise RuntimeError(f"Failed to dispose Copilot session: {e}") from e
+        except Exception as exc:
+            self.logger.error("Failed to dispose Copilot session", exc_info=exc)
+            raise RuntimeError(f"Failed to dispose Copilot session: {exc}") from exc
         finally:
             self._session = None
 
+    @log_exceptions("Copilot request failed", logger_attr="logger")
     async def send_message_and_await_response(self, message: str) -> str:
         """Send a prompt and wait for a Copilot response.
 
@@ -214,6 +226,14 @@ class CopilotProvider(BaseAIProvider[CopilotOptions]):
         response_content = ""
         if isinstance(response.data, AssistantMessageData):
             response_content = response.data.content or ""
+        else:
+            self.logger.warning(
+                "Copilot returned a non-assistant response payload",
+                response_type=type(response.data).__name__,
+            )
+
+        if not response_content:
+            self.logger.warning("Copilot returned an empty response body")
 
         self.logger.debug("Received message from Copilot", response_length=len(response_content))
         return response_content

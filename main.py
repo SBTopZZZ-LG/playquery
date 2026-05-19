@@ -112,21 +112,29 @@ async def ask_internet(query: str, ctx: Context) -> str:  # type: ignore[type-ar
     """
     app: _AppContext = ctx.request_context.lifespan_context
     app.logger.debug("Received ask_internet request", query=query)
-    async with managed_ai_provider(
-        app.config.ai,
-        logger=app.logger.child("ai_providers"),
-        system_prompt=app.agent.system_prompt,
-        tools=app.agent.tools,
-    ) as provider:
-        started_at = perf_counter()
-        response = await provider.query(query)
-        duration_seconds = perf_counter() - started_at
-        app.logger.debug(
-            "Completed ask_internet request",
+    try:
+        async with managed_ai_provider(
+            app.config.ai,
+            logger=app.logger.child("ai_providers"),
+            system_prompt=app.agent.system_prompt,
+            tools=app.agent.tools,
+        ) as provider:
+            started_at = perf_counter()
+            response = await provider.query(query)
+            duration_seconds = perf_counter() - started_at
+            app.logger.debug(
+                "Completed ask_internet request",
+                query=query,
+                duration_seconds=round(duration_seconds, 3),
+            )
+            return f"{response}\n\nResponse time: {duration_seconds:.1f}s"
+    except Exception as exc:
+        app.logger.error(
+            "ask_internet request failed",
+            exc_info=exc,
             query=query,
-            duration_seconds=round(duration_seconds, 3),
         )
-        return f"{response}\n\nResponse time: {duration_seconds:.1f}s"
+        raise
 
 
 if __name__ == "__main__":

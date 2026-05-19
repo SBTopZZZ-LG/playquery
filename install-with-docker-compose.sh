@@ -214,6 +214,11 @@ if [[ -z "$AI_MODEL" ]]; then
   AI_MODEL="$(prompt_default 'AI model' "$(value_or_default "$ENV_FILE" "PLAYQUERY_AI_MODEL" 'claude-haiku-4.5')")"
 fi
 
+LOGGING_LEVEL="${PLAYQUERY_LOGGING_LEVEL:-}"
+if [[ -z "$LOGGING_LEVEL" ]]; then
+  LOGGING_LEVEL="$(prompt_default 'Logging level' "$(value_or_default "$ENV_FILE" "PLAYQUERY_LOGGING_LEVEL" 'DEBUG')")"
+fi
+
 CORS_ORIGINS="${PLAYQUERY_MCP_CORS_ORIGINS:-}"
 if [[ -z "$CORS_ORIGINS" ]]; then
   CORS_ORIGINS="$(prompt_default 'Allowed CORS origins' "$(value_or_default "$ENV_FILE" "PLAYQUERY_MCP_CORS_ORIGINS" '*')")"
@@ -230,6 +235,7 @@ cat > "$ENV_FILE" <<EOF
 PLAYQUERY_IMAGE_TAG=${IMAGE_TAG}
 PLAYQUERY_AI_GITHUB_TOKEN=${GITHUB_TOKEN}
 PLAYQUERY_AI_MODEL=${AI_MODEL}
+PLAYQUERY_LOGGING_LEVEL=${LOGGING_LEVEL}
 PLAYQUERY_MCP_PORT=${MCP_PORT}
 PLAYQUERY_MCP_CORS_ORIGINS=${CORS_ORIGINS}
 EOF

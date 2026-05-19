@@ -6,7 +6,7 @@ import random
 from collections import defaultdict
 from urllib.parse import urlparse
 
-from logger import BaseLogger
+from logger import BaseLogger, log_exceptions
 from parsers import ParseResult, parse
 from scraper.base import BaseScraper
 from search_engine.base import BaseSearchEngine, SearchEngineResult
@@ -32,6 +32,7 @@ class PlayQueryService:
             scraper_type=type(scraper).__name__ if scraper is not None else None,
         )
 
+    @log_exceptions("Search request failed", logger_attr="_logger")
     async def search(
         self,
         query: str,
@@ -51,6 +52,8 @@ class PlayQueryService:
         opts = dataclasses.replace(default_opts, **(options or {}))
         results = await self._engine.search(query, opts)
         trimmed_results = results[:max_results]
+        if not trimmed_results:
+            self._logger.warning("Search returned no results", query=query)
         self._logger.debug(
             "Completed search request",
             query=query,
@@ -59,6 +62,7 @@ class PlayQueryService:
         )
         return trimmed_results
 
+    @log_exceptions("Scrape request failed", logger_attr="_logger")
     async def scrape(
         self,
         url: str,
@@ -67,6 +71,9 @@ class PlayQueryService:
         """Scrape the given URL and return the parsed main-content text."""
 
         if self._scraper is None:
+            self._logger.error(
+                "Scrape requested without configured scraper", error=_NO_SCRAPER_ERROR
+            )
             raise RuntimeError(_NO_SCRAPER_ERROR)
         self._logger.debug("Starting scrape request", url=url)
         default_opts = self._scraper.default_scrape_options()
@@ -81,6 +88,7 @@ class PlayQueryService:
         )
         return parsed
 
+    @log_exceptions("Batch scrape failed", logger_attr="_logger")
     async def batch_scrape(
         self,
         urls: list[str],
@@ -105,7 +113,13 @@ class PlayQueryService:
                 detection.
         """
         if self._scraper is None:
+            self._logger.error(
+                "Batch scrape requested without configured scraper",
+                error=_NO_SCRAPER_ERROR,
+            )
             raise RuntimeError(_NO_SCRAPER_ERROR)
+        if not urls:
+            self._logger.warning("Batch scrape requested with no URLs")
 
         self._logger.debug(
             "Starting batch scrape",
@@ -143,6 +157,7 @@ class PlayQueryService:
         )
         return parsed_results
 
+    @log_exceptions("Batch search failed", logger_attr="_logger")
     async def batch_search(
         self,
         queries: list[str],
@@ -159,6 +174,8 @@ class PlayQueryService:
         Returns:
             A dict mapping each query string to its list of :class:`SearchEngineResult`.
         """
+        if not queries:
+            self._logger.warning("Batch search requested with no queries")
         self._logger.debug(
             "Starting batch search", query_count=len(queries), max_results=max_results
         )
@@ -167,6 +184,7 @@ class PlayQueryService:
         self._logger.debug("Completed batch search", query_count=len(queries))
         return payload
 
+    @log_exceptions("Search and scrape failed", logger_attr="_logger")
     async def search_and_scrape(
         self,
         query: str,
@@ -179,9 +197,15 @@ class PlayQueryService:
         """
 
         if self._scraper is None:
+            self._logger.error(
+                "Search and scrape requested without configured scraper",
+                error=_NO_SCRAPER_ERROR,
+            )
             raise RuntimeError(_NO_SCRAPER_ERROR)
         self._logger.debug("Starting search and scrape", query=query, max_results=max_results)
         search_results = await self.search(query, max_results, search_options)
+        if not search_results:
+            self._logger.warning("Search and scrape found no candidate URLs", query=query)
         tasks = [self.scrape(r.url, scrape_options) for r in search_results]
         parsed_results = list(await asyncio.gather(*tasks))
         self._logger.debug(

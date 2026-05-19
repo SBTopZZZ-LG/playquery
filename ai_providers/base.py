@@ -8,7 +8,7 @@ from typing import Any, Generic, Literal, TypedDict, TypeVar
 
 from pydantic import BaseModel
 
-from logger import BaseLogger
+from logger import BaseLogger, log_exceptions
 
 
 class JSONParseError(Exception):
@@ -160,6 +160,7 @@ class BaseAIProvider(ABC, Generic[T]):
 
         return await self.send_message_and_await_response(user_message)
 
+    @log_exceptions("AI JSON query failed", logger_attr="logger")
     async def query_json(self, user_message: str, max_retries: int = 3) -> dict:
         """Send a message and return the response parsed as a dictionary.
 
@@ -189,10 +190,22 @@ class BaseAIProvider(ABC, Generic[T]):
                 return json.loads(cleaned)
             except json.JSONDecodeError as exc:
                 if attempt == max_retries:
+                    self.logger.error(
+                        "AI response could not be parsed as JSON",
+                        exc_info=exc,
+                        attempts=max_retries + 1,
+                    )
                     raise JSONParseError(
                         f"Failed to parse JSON after {max_retries + 1} attempts. "
                         f"Last error: {exc}. Last response: {raw!r}"
                     ) from exc
+
+                self.logger.warning(
+                    "AI response was not valid JSON; retrying",
+                    attempt=attempt + 1,
+                    max_retries=max_retries,
+                    parse_error=str(exc),
+                )
 
                 raw = await self.query(
                     f"Your previous response was not valid JSON. "
