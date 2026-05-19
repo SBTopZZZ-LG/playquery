@@ -36,6 +36,7 @@ venv.bak/
 .idea/
 *.swp
 .DS_Store
+.github/copilot-instructions.md
 
 # PyBuilder
 .pybuilder/
