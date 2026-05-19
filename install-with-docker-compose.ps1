@@ -73,6 +73,34 @@ function Select-ComposeCommand {
     exit 1
 }
 
+function Get-DockerDaemonErrorHint {
+    param([string]$Message)
+
+    if ($Message -match 'dockerDesktopLinuxEngine') {
+        return 'Docker Desktop is not running with the Linux engine available. Start Docker Desktop and ensure it is using Linux containers, then rerun the installer.'
+    }
+
+    return $null
+}
+
+function Assert-DockerDaemonAvailable {
+    $output = & docker info 2>&1
+    $exitCode = $LASTEXITCODE
+    if ($exitCode -eq 0) {
+        return
+    }
+
+    $message = ($output | Out-String).Trim()
+    $hint = Get-DockerDaemonErrorHint -Message $message
+    if (-not [string]::IsNullOrEmpty($hint)) {
+        Write-Error "$hint`n`nOriginal error:`n$message"
+        exit 1
+    }
+
+    Write-Error "Docker is installed but the daemon is unavailable.`n`nOriginal error:`n$message"
+    exit 1
+}
+
 function Get-LatestReleaseRef {
     try {
         $release = Invoke-RestMethod -Uri "$ApiBase/releases/latest"
@@ -197,7 +225,7 @@ function Invoke-Compose {
                 $output = & docker-compose @Arguments 2>$null
             }
             else {
-                $output = & docker-compose @Arguments
+                $output = & docker-compose @Arguments 2>&1
             }
         }
         else {
@@ -205,12 +233,18 @@ function Invoke-Compose {
                 $output = & docker compose @Arguments 2>$null
             }
             else {
-                $output = & docker compose @Arguments
+                $output = & docker compose @Arguments 2>&1
             }
         }
 
         if ((-not $IgnoreExitCode) -and $LASTEXITCODE -ne 0) {
-            throw "Compose command failed with exit code $LASTEXITCODE."
+            $message = ($output | Out-String).Trim()
+            $hint = Get-DockerDaemonErrorHint -Message $message
+            if (-not [string]::IsNullOrEmpty($hint)) {
+                throw "$hint`n`nOriginal error:`n$message"
+            }
+
+            throw "Compose command failed with exit code $LASTEXITCODE.`n`n$message"
         }
 
         return $output
@@ -262,6 +296,7 @@ Require-Command -Name 'curl'
 Require-Command -Name 'docker'
 
 Select-ComposeCommand
+Assert-DockerDaemonAvailable
 $latestReleaseTag = Get-LatestReleaseRef
 $defaultRef = if ([string]::IsNullOrEmpty($latestReleaseTag)) { 'main' } else { $latestReleaseTag }
 
