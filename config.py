@@ -58,6 +58,8 @@ _ENV_MAP: list[tuple[str, tuple[str, ...], Callable[[str], Any]]] = [
     ("PLAYQUERY_AI_MODEL", ("ai", "model"), str),
     ("PLAYQUERY_AI_TIMEOUT", ("ai", "timeout"), float),
     ("PLAYQUERY_AI_GITHUB_TOKEN", ("ai", "github_token"), str),
+    ("PLAYQUERY_AI_API_KEY", ("ai", "api_key"), str),
+    ("PLAYQUERY_AI_BASE_URL", ("ai", "base_url"), str),
 ]
 
 

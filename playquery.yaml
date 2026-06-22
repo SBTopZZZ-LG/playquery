@@ -27,6 +27,13 @@ ai:
   # Optional GitHub token for providers that support it (e.g. Copilot).
   github_token: null
 
+  # ────────────────────────────────────────────────────────────
+  # OpenAI-compatible provider fields (type: openai)
+  # Set PLAYQUERY_AI_API_KEY env var, or uncomment below.
+  # ────────────────────────────────────────────────────────────
+  # api_key: null
+  # base_url: https://api.openai.com/v1
+
 # ─────────────────────────────────────────────
 #  Search Engine
 # ─────────────────────────────────────────────

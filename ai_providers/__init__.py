@@ -17,6 +17,7 @@ from .factory import (
     dispose_ai_provider,
     managed_ai_provider,
 )
+from .openai import OpenAIOptions, OpenAIProvider
 from .registry import get_provider_class, register_provider
 from .tools import define_tool
 
@@ -28,6 +29,8 @@ __all__ = [
     "JSONParseError",
     "CopilotOptions",
     "CopilotProvider",
+    "OpenAIOptions",
+    "OpenAIProvider",
     "ToolHandler",
     "ToolInvocation",
     "ToolResult",
