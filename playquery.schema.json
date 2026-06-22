@@ -48,6 +48,38 @@
       "title": "LoggingConfig",
       "type": "object"
     },
+    "OpenAIOptions": {
+      "description": "Pydantic model for OpenAI AI provider configuration.",
+      "properties": {
+        "type": {
+          "const": "openai",
+          "default": "openai",
+          "title": "Type",
+          "type": "string"
+        },
+        "api_key": {
+          "title": "Api Key",
+          "type": "string"
+        },
+        "base_url": {
+          "default": "https://api.openai.com/v1",
+          "title": "Base Url",
+          "type": "string"
+        },
+        "model": {
+          "default": "gpt-4o",
+          "title": "Model",
+          "type": "string"
+        },
+        "timeout": {
+          "default": 60.0,
+          "title": "Timeout",
+          "type": "number"
+        }
+      },
+      "title": "OpenAIOptions",
+      "type": "object"
+    },
     "PatchrightOptions": {
       "description": "Pydantic model for Patchright scraper configuration.",
       "properties": {
@@ -183,13 +215,17 @@
     "ai": {
       "discriminator": {
         "mapping": {
-          "copilot": "#/$defs/CopilotOptions"
+          "copilot": "#/$defs/CopilotOptions",
+          "openai": "#/$defs/OpenAIOptions"
         },
         "propertyName": "type"
       },
       "oneOf": [
         {
           "$ref": "#/$defs/CopilotOptions"
+        },
+        {
+          "$ref": "#/$defs/OpenAIOptions"
         }
       ],
       "title": "Ai"

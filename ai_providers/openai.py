@@ -177,5 +177,7 @@ class OpenAIProvider(BaseAIProvider[OpenAIOptions]):
 
             assistant_content = msg.content or ""
             self._messages.append({"role": "assistant", "content": assistant_content})
-            self.logger.debug("Received response from OpenAI", response_length=len(assistant_content))
+            self.logger.debug(
+                "Received response from OpenAI", response_length=len(assistant_content)
+            )
             return assistant_content
