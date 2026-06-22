@@ -214,6 +214,34 @@ if [[ -z "$AI_MODEL" ]]; then
   AI_MODEL="$(prompt_default 'AI model' "$(value_or_default "$ENV_FILE" "PLAYQUERY_AI_MODEL" 'claude-haiku-4.5')")"
 fi
 
+IS_OPENAI=false
+if [[ "$AI_MODEL" == openai* || "$AI_MODEL" == *openai* || "$AI_MODEL" == *Groq* || "$AI_MODEL" == *DeepInfra* || "$AI_MODEL" == *Cerebras* || "$AI_MODEL" == *Ollama* ]]; then
+  IS_OPENAI=true
+fi
+
+AI_TYPE="${PLAYQUERY_AI_TYPE:-}"
+if [[ -z "$AI_TYPE" ]]; then
+  if [[ "$IS_OPENAI" == true ]]; then
+    AI_TYPE="$(prompt_default 'AI provider type' 'openai')"
+  else
+    AI_TYPE="$(prompt_default 'AI provider type' 'copilot')"
+  fi
+fi
+
+API_KEY="${PLAYQUERY_AI_API_KEY:-}"
+BASE_URL="${PLAYQUERY_AI_BASE_URL:-}"
+if [[ "$AI_TYPE" == "openai" ]]; then
+  API_KEY="$(env_file_value "$ENV_FILE" "PLAYQUERY_AI_API_KEY" || true)"
+  if [[ -z "$API_KEY" ]]; then
+    while [[ -z "$API_KEY" ]]; do
+      read -r -s -p "API key for OpenAI-compatible endpoint: " API_KEY < "$TTY_DEVICE"
+      printf '\n' > "$TTY_DEVICE"
+    done
+  fi
+
+  BASE_URL="$(prompt_default 'Base URL (OpenAI-compatible endpoint)' "$(value_or_default "$ENV_FILE" "PLAYQUERY_AI_BASE_URL" 'https://api.openai.com/v1')")"
+fi
+
 LOGGING_LEVEL="${PLAYQUERY_LOGGING_LEVEL:-}"
 if [[ -z "$LOGGING_LEVEL" ]]; then
   LOGGING_LEVEL="$(prompt_default 'Logging level' "$(value_or_default "$ENV_FILE" "PLAYQUERY_LOGGING_LEVEL" 'DEBUG')")"
@@ -233,11 +261,14 @@ curl -fsSL "${RAW_BASE}/${RELEASE_REF}/docker-compose.prod.yaml" -o "$COMPOSE_FI
 
 cat > "$ENV_FILE" <<EOF
 PLAYQUERY_IMAGE_TAG=${IMAGE_TAG}
-PLAYQUERY_AI_GITHUB_TOKEN=${GITHUB_TOKEN}
+PLAYQUERY_AI_TYPE=${AI_TYPE}
 PLAYQUERY_AI_MODEL=${AI_MODEL}
+PLAYQUERY_AI_API_KEY=${API_KEY}
+PLAYQUERY_AI_BASE_URL=${BASE_URL}
 PLAYQUERY_LOGGING_LEVEL=${LOGGING_LEVEL}
 PLAYQUERY_MCP_PORT=${MCP_PORT}
 PLAYQUERY_MCP_CORS_ORIGINS=${CORS_ORIGINS}
+PLAYQUERY_AI_GITHUB_TOKEN=${GITHUB_TOKEN}
 EOF
 
 cd "$INSTALL_DIR"

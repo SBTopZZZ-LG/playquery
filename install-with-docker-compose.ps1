@@ -346,6 +346,26 @@ if ([string]::IsNullOrEmpty($aiModel)) {
     $aiModel = Prompt-Default -Prompt 'AI model' -DefaultValue (Get-ValueOrDefault -File $envFile -Key 'PLAYQUERY_AI_MODEL' -Fallback 'claude-haiku-4.5')
 }
 
+# Detect OpenAI-compatible providers based on model name hints
+$isOpenAi = $aiModel -match 'openai|Groq|DeepInfra|Cerebras|Ollama'
+
+$aiType = $env:PLAYQUERY_AI_TYPE
+if ([string]::IsNullOrEmpty($aiType)) {
+    $defaultType = if ($isOpenAi) { 'openai' } else { 'copilot' }
+    $aiType = Prompt-Default -Prompt 'AI provider type' -DefaultValue $defaultType
+}
+
+$apiKey = $env:PLAYQUERY_AI_API_KEY
+$baseUrl = $env:PLAYQUERY_AI_BASE_URL
+if ($aiType -eq 'openai') {
+    if ([string]::IsNullOrEmpty($apiKey)) {
+        $apiKey = Prompt-Secret -Prompt 'API key for OpenAI-compatible endpoint' -DefaultValue (Get-ValueOrDefault -File $envFile -Key 'PLAYQUERY_AI_API_KEY' -Fallback '')
+    }
+    if ([string]::IsNullOrEmpty($baseUrl)) {
+        $baseUrl = Prompt-Default -Prompt 'Base URL (OpenAI-compatible endpoint)' -DefaultValue (Get-ValueOrDefault -File $envFile -Key 'PLAYQUERY_AI_BASE_URL' -Fallback 'https://api.openai.com/v1')
+    }
+}
+
 $loggingLevel = $env:PLAYQUERY_LOGGING_LEVEL
 if ([string]::IsNullOrEmpty($loggingLevel)) {
     $loggingLevel = Prompt-Default -Prompt 'Logging level' -DefaultValue (Get-ValueOrDefault -File $envFile -Key 'PLAYQUERY_LOGGING_LEVEL' -Fallback 'DEBUG')
@@ -365,8 +385,11 @@ Invoke-WebRequest -Uri "$RawBase/$releaseRef/docker-compose.prod.yaml" -OutFile 
 
 $envContent = @"
 PLAYQUERY_IMAGE_TAG=$imageTag
-PLAYQUERY_AI_GITHUB_TOKEN=$githubToken
+PLAYQUERY_AI_TYPE=$aiType
 PLAYQUERY_AI_MODEL=$aiModel
+PLAYQUERY_AI_API_KEY=$apiKey
+PLAYQUERY_AI_BASE_URL=$baseUrl
+PLAYQUERY_AI_GITHUB_TOKEN=$githubToken
 PLAYQUERY_LOGGING_LEVEL=$loggingLevel
 PLAYQUERY_MCP_PORT=$mcpPort
 PLAYQUERY_MCP_CORS_ORIGINS=$corsOrigins
