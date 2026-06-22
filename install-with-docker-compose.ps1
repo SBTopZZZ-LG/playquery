@@ -8,6 +8,20 @@ $RepoName = 'playquery'
 $RawBase = "https://raw.githubusercontent.com/$RepoOwner/$RepoName"
 $ApiBase = "https://api.github.com/repos/$RepoOwner/$RepoName"
 
+# Provider-specific field declarations.
+# Adding a new AI provider = adding one entry here.
+# Each field: 'KEY|prompt text|default value|is_secret (true/false)'
+# Multiple fields for a single provider go in the array.
+$script:ProviderFields = @{
+    copilot = @(
+        'GITHUB_TOKEN|GitHub token for Copilot||true'
+    )
+    openai = @(
+        'API_KEY|API key for OpenAI-compatible endpoint||true'
+        'BASE_URL|Base URL (OpenAI-compatible endpoint)|https://api.openai.com/v1|false'
+    )
+}
+
 function Get-EnvFileValue {
     param(
         [string]$File,
@@ -182,10 +196,44 @@ function Prompt-Secret {
             return $value
         }
 
-        if (-not [string]::IsNullOrEmpty($DefaultValue)) {
-            return $DefaultValue
-        }
+        return $DefaultValue
     }
+}
+
+# Prompt for a single provider-specific field and assign the result to a
+# script-scope variable named by the field's KEY (uppercase, e.g. GITHUB_TOKEN).
+function Prompt-ProviderField {
+    param([string]$FieldDef)
+
+    $parts = $FieldDef -split '\|', 4
+    if ($parts.Count -lt 4) {
+        Write-Error "Invalid provider field definition: $FieldDef"
+        exit 1
+    }
+
+    $key = $parts[0]
+    $promptText = $parts[1]
+    $defaultValue = $parts[2]
+    $isSecret = ($parts[3] -eq 'true')
+
+    $envVarName = "PLAYQUERY_AI_$key"
+    $envValue = [Environment]::GetEnvironmentVariable($envVarName)
+
+    if (-not [string]::IsNullOrEmpty($envValue)) {
+        Set-Variable -Name $key -Value $envValue -Scope Script
+        return
+    }
+
+    $resolvedDefault = Get-ValueOrDefault -File $envFile -Key $envVarName -Fallback $defaultValue
+
+    if ($isSecret) {
+        $result = Prompt-Secret -Prompt $promptText -DefaultValue $resolvedDefault
+    }
+    else {
+        $result = Prompt-Default -Prompt $promptText -DefaultValue $resolvedDefault
+    }
+
+    Set-Variable -Name $key -Value $result -Scope Script
 }
 
 function Prompt-Confirm {
@@ -349,20 +397,24 @@ if ([string]::IsNullOrEmpty($aiModel)) {
 # Detect OpenAI-compatible providers based on model name hints
 $isOpenAi = $aiModel -match 'openai|Groq|DeepInfra|Cerebras|Ollama'
 
-$aiType = $env:PLAYQUERY_AI_TYPE
-if ([string]::IsNullOrEmpty($aiType)) {
-    $defaultType = if ($isOpenAi) { 'openai' } else { 'copilot' }
-    $aiType = Prompt-Default -Prompt 'AI provider type' -DefaultValue $defaultType
+if (-not [string]::IsNullOrEmpty($env:PLAYQUERY_AI_TYPE)) {
+    $aiType = $env:PLAYQUERY_AI_TYPE
+}
+else {
+    $heuristicDefault = if ($isOpenAi) { 'openai' } else { 'copilot' }
+    $aiTypeDefault = Get-ValueOrDefault -File $envFile -Key 'PLAYQUERY_AI_TYPE' -Fallback $heuristicDefault
+    $aiType = Prompt-Default -Prompt 'AI provider type' -DefaultValue $aiTypeDefault
 }
 
-$apiKey = $env:PLAYQUERY_AI_API_KEY
-$baseUrl = $env:PLAYQUERY_AI_BASE_URL
-if ($aiType -eq 'openai') {
-    if ([string]::IsNullOrEmpty($apiKey)) {
-        $apiKey = Prompt-Secret -Prompt 'API key for OpenAI-compatible endpoint' -DefaultValue (Get-ValueOrDefault -File $envFile -Key 'PLAYQUERY_AI_API_KEY' -Fallback '')
-    }
-    if ([string]::IsNullOrEmpty($baseUrl)) {
-        $baseUrl = Prompt-Default -Prompt 'Base URL (OpenAI-compatible endpoint)' -DefaultValue (Get-ValueOrDefault -File $envFile -Key 'PLAYQUERY_AI_BASE_URL' -Fallback 'https://api.openai.com/v1')
+# Initialize provider-specific fields so the .env write is clean even if the
+# current $aiType has no field declarations.
+$apiKey = ''
+$baseUrl = ''
+$githubToken = ''
+
+if ($script:ProviderFields.ContainsKey($aiType)) {
+    foreach ($fieldDef in $script:ProviderFields[$aiType]) {
+        Prompt-ProviderField -FieldDef $fieldDef
     }
 }
 
@@ -374,11 +426,6 @@ if ([string]::IsNullOrEmpty($loggingLevel)) {
 $corsOrigins = $env:PLAYQUERY_MCP_CORS_ORIGINS
 if ([string]::IsNullOrEmpty($corsOrigins)) {
     $corsOrigins = Prompt-Default -Prompt 'Allowed CORS origins' -DefaultValue (Get-ValueOrDefault -File $envFile -Key 'PLAYQUERY_MCP_CORS_ORIGINS' -Fallback '*')
-}
-
-$githubToken = $env:PLAYQUERY_AI_GITHUB_TOKEN
-if ([string]::IsNullOrEmpty($githubToken)) {
-    $githubToken = Prompt-Secret -Prompt 'GitHub token for Copilot' -DefaultValue (Get-ValueOrDefault -File $envFile -Key 'PLAYQUERY_AI_GITHUB_TOKEN' -Fallback '')
 }
 
 Invoke-WebRequest -Uri "$RawBase/$releaseRef/docker-compose.prod.yaml" -OutFile $composeFile

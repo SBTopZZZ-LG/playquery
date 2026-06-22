@@ -8,6 +8,15 @@ RAW_BASE="https://raw.githubusercontent.com/${REPO_OWNER}/${REPO_NAME}"
 API_BASE="https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}"
 TTY_DEVICE="/dev/tty"
 
+# Provider-specific field declarations.
+# Adding a new AI provider = adding one entry here.
+# Each field: "KEY|prompt text|default value|is_secret (true/false)"
+# Multiple fields for a single provider are separated by ';'.
+declare -A PROVIDER_FIELDS=(
+  ["copilot"]="GITHUB_TOKEN|GitHub token for Copilot||true"
+  ["openai"]="API_KEY|API key for OpenAI-compatible endpoint||true;BASE_URL|Base URL (OpenAI-compatible endpoint)|https://api.openai.com/v1|false"
+)
+
 env_file_value() {
   local file="$1"
   local key="$2"
@@ -95,12 +104,41 @@ prompt_secret() {
     read -r -s -p "$prompt: " value < "$TTY_DEVICE"
     printf '\n' > "$TTY_DEVICE"
 
-    if [[ -z "$value" && -n "$default_value" ]]; then
+    if [[ -z "$value" ]]; then
       value="$default_value"
     fi
   done
 
   printf '%s' "$value"
+}
+
+# Prompt for a single provider-specific field and assign the result to a
+# variable named by the field's KEY (uppercase, e.g. GITHUB_TOKEN).
+prompt_provider_field() {
+  local field_def="$1"
+  local key prompt default is_secret current_value env_var_name result
+
+  local IFS_SAVE="$IFS"
+  IFS='|' read -r key prompt default is_secret <<< "$field_def"
+  IFS="$IFS_SAVE"
+
+  env_var_name="PLAYQUERY_AI_${key}"
+  current_value="${!env_var_name:-}"
+
+  if [[ -n "$current_value" ]]; then
+    printf -v "$key" '%s' "$current_value"
+    return
+  fi
+
+  current_value="$(value_or_default "$ENV_FILE" "$env_var_name" "$default")"
+
+  if [[ "$is_secret" == "true" ]]; then
+    result="$(prompt_secret "$prompt" "$current_value")"
+  else
+    result="$(prompt_default "$prompt" "$current_value")"
+  fi
+
+  printf -v "$key" '%s' "$result"
 }
 
 prompt_confirm() {
@@ -219,27 +257,29 @@ if [[ "$AI_MODEL" == openai* || "$AI_MODEL" == *openai* || "$AI_MODEL" == *Groq*
   IS_OPENAI=true
 fi
 
-AI_TYPE="${PLAYQUERY_AI_TYPE:-}"
-if [[ -z "$AI_TYPE" ]]; then
+if [[ -n "${PLAYQUERY_AI_TYPE:-}" ]]; then
+  AI_TYPE="$PLAYQUERY_AI_TYPE"
+else
   if [[ "$IS_OPENAI" == true ]]; then
-    AI_TYPE="$(prompt_default 'AI provider type' 'openai')"
+    heuristic_default='openai'
   else
-    AI_TYPE="$(prompt_default 'AI provider type' 'copilot')"
+    heuristic_default='copilot'
   fi
+  ai_type_default="$(value_or_default "$ENV_FILE" "PLAYQUERY_AI_TYPE" "$heuristic_default")"
+  AI_TYPE="$(prompt_default 'AI provider type' "$ai_type_default")"
 fi
 
-API_KEY="${PLAYQUERY_AI_API_KEY:-}"
-BASE_URL="${PLAYQUERY_AI_BASE_URL:-}"
-if [[ "$AI_TYPE" == "openai" ]]; then
-  API_KEY="$(env_file_value "$ENV_FILE" "PLAYQUERY_AI_API_KEY" || true)"
-  if [[ -z "$API_KEY" ]]; then
-    while [[ -z "$API_KEY" ]]; do
-      read -r -s -p "API key for OpenAI-compatible endpoint: " API_KEY < "$TTY_DEVICE"
-      printf '\n' > "$TTY_DEVICE"
-    done
-  fi
+API_KEY=""
+BASE_URL=""
+GITHUB_TOKEN=""
 
-  BASE_URL="$(prompt_default 'Base URL (OpenAI-compatible endpoint)' "$(value_or_default "$ENV_FILE" "PLAYQUERY_AI_BASE_URL" 'https://api.openai.com/v1')")"
+if [[ -n "${PROVIDER_FIELDS[$AI_TYPE]+exists}" ]]; then
+  IFS_SAVE="$IFS"
+  IFS=';' read -ra _field_defs <<< "${PROVIDER_FIELDS[$AI_TYPE]}"
+  IFS="$IFS_SAVE"
+  for _field_def in "${_field_defs[@]}"; do
+    prompt_provider_field "$_field_def"
+  done
 fi
 
 LOGGING_LEVEL="${PLAYQUERY_LOGGING_LEVEL:-}"
@@ -250,11 +290,6 @@ fi
 CORS_ORIGINS="${PLAYQUERY_MCP_CORS_ORIGINS:-}"
 if [[ -z "$CORS_ORIGINS" ]]; then
   CORS_ORIGINS="$(prompt_default 'Allowed CORS origins' "$(value_or_default "$ENV_FILE" "PLAYQUERY_MCP_CORS_ORIGINS" '*')")"
-fi
-
-GITHUB_TOKEN="${PLAYQUERY_AI_GITHUB_TOKEN:-}"
-if [[ -z "$GITHUB_TOKEN" ]]; then
-  GITHUB_TOKEN="$(prompt_secret 'GitHub token for Copilot' "$(value_or_default "$ENV_FILE" "PLAYQUERY_AI_GITHUB_TOKEN" '')")"
 fi
 
 curl -fsSL "${RAW_BASE}/${RELEASE_REF}/docker-compose.prod.yaml" -o "$COMPOSE_FILE"
