@@ -9,13 +9,28 @@ API_BASE="https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}"
 TTY_DEVICE="/dev/tty"
 
 # Provider-specific field declarations.
-# Adding a new AI provider = adding one entry here.
+# Adding a new AI provider = adding entries to provider_is_known and
+# provider_field_defs below.
 # Each field: "KEY|prompt text|default value|is_secret (true/false)"
-# Multiple fields for a single provider are separated by ';'.
-declare -A PROVIDER_FIELDS=(
-  ["copilot"]="GITHUB_TOKEN|GitHub token for Copilot||true"
-  ["openai"]="API_KEY|API key for OpenAI-compatible endpoint||true;BASE_URL|Base URL (OpenAI-compatible endpoint)|https://api.openai.com/v1|false"
-)
+# Multiple fields for a single provider are emitted as separate lines.
+provider_is_known() {
+  case "$1" in
+    copilot|openai) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+provider_field_defs() {
+  case "$1" in
+    copilot)
+      printf '%s\n' "GITHUB_TOKEN|GitHub token for Copilot||true"
+      ;;
+    openai)
+      printf '%s\n' "API_KEY|API key for OpenAI-compatible endpoint||true"
+      printf '%s\n' "BASE_URL|Base URL (OpenAI-compatible endpoint)|https://api.openai.com/v1|false"
+      ;;
+  esac
+}
 
 env_file_value() {
   local file="$1"
@@ -273,13 +288,11 @@ API_KEY=""
 BASE_URL=""
 GITHUB_TOKEN=""
 
-if [[ -n "${PROVIDER_FIELDS[$AI_TYPE]+exists}" ]]; then
-  IFS_SAVE="$IFS"
-  IFS=';' read -ra _field_defs <<< "${PROVIDER_FIELDS[$AI_TYPE]}"
-  IFS="$IFS_SAVE"
-  for _field_def in "${_field_defs[@]}"; do
+if provider_is_known "$AI_TYPE"; then
+  while IFS= read -r _field_def; do
+    [[ -n "$_field_def" ]] || continue
     prompt_provider_field "$_field_def"
-  done
+  done < <(provider_field_defs "$AI_TYPE")
 fi
 
 LOGGING_LEVEL="${PLAYQUERY_LOGGING_LEVEL:-}"
