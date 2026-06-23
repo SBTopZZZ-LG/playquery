@@ -3,26 +3,20 @@ name: Reusable CD
 on:
   workflow_call:
   workflow_dispatch:
-    inputs:
-      force_build:
-        description: Force the Docker image build even if the version tag already exists
-        required: false
-        default: false
-        type: boolean
 
 permissions:
   contents: write
   packages: write
 
 jobs:
-  prepare-release:
-    name: Prepare release
+  check-tag:
+    name: Check version tag
     runs-on: ubuntu-latest
     outputs:
-      skip: ${{ steps.release.outputs.skip }}
-      release_exists: ${{ steps.release.outputs.release_exists }}
+      skip: ${{ steps.check.outputs.skip }}
+      release_exists: ${{ steps.check.outputs.release_exists }}
       version: ${{ steps.project.outputs.version }}
-      version_tag: ${{ steps.release.outputs.version_tag }}
+      version_tag: ${{ steps.check.outputs.version_tag }}
       image: ${{ steps.project.outputs.image }}
     steps:
       - name: Checkout repository
@@ -56,14 +50,11 @@ jobs:
               fh.write(f"image={image}\n")
           PY
 
-      - name: Prepare tags and release notes
-        id: release
+      - name: Check if release already exists
+        id: check
         shell: bash
         env:
-          FORCE_BUILD: ${{ github.event_name == 'workflow_dispatch' && inputs.force_build || false }}
           VERSION: ${{ steps.project.outputs.version }}
-          GITHUB_SHA: ${{ github.sha }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
         run: |
           set -euo pipefail
 
@@ -72,26 +63,91 @@ jobs:
 
           if git rev-parse -q --verify "refs/tags/${version_tag}" >/dev/null; then
             echo "release_exists=true" >> "$GITHUB_OUTPUT"
-            if [[ "$FORCE_BUILD" == "true" ]]; then
-              echo "skip=false" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
-
             echo "skip=true" >> "$GITHUB_OUTPUT"
-            exit 0
+          else
+            echo "release_exists=false" >> "$GITHUB_OUTPUT"
+            echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
 
-          echo "release_exists=false" >> "$GITHUB_OUTPUT"
-          previous_tag="$(git tag --list 'v*' --sort=-v:refname | head -n1 || true)"
-          echo "skip=false" >> "$GITHUB_OUTPUT"
-          echo "previous_tag=${previous_tag}" >> "$GITHUB_OUTPUT"
+  publish-image:
+    name: Publish image
+    needs: check-tag
+    if: needs.check-tag.outputs.skip != 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-          git tag "${version_tag}" "$GITHUB_SHA"
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ needs.check-tag.outputs.image }}
+          tags: |
+            type=raw,value=${{ needs.check-tag.outputs.version_tag }}
+            type=raw,value=latest
+            type=sha,format=long,prefix=sha-
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64,linux/arm64/v8
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  prepare-release:
+    name: Prepare release
+    needs: [check-tag, publish-image]
+    if: needs.check-tag.outputs.skip != 'true' && needs.check-tag.outputs.release_exists != 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch tags
+        run: git fetch --force --tags origin
+
+      - name: Prepare tags and release notes
+        shell: bash
+        env:
+          VERSION_TAG: ${{ needs.check-tag.outputs.version_tag }}
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          previous_tag="$(git tag --list 'v*' --sort=-v:refname | head -n1 || true)"
+
+          git tag "${VERSION_TAG}" "$GITHUB_SHA"
           git tag -f latest "$GITHUB_SHA"
-          git push origin "refs/tags/${version_tag}"
+          git push origin "refs/tags/${VERSION_TAG}"
           git push origin "refs/tags/latest" --force
 
-          VERSION_TAG="$version_tag" PREVIOUS_TAG="$previous_tag" python - <<'PY'
+          VERSION_TAG="$VERSION_TAG" PREVIOUS_TAG="$previous_tag" python - <<'PY'
           import os
           import re
           import subprocess
@@ -164,54 +220,7 @@ jobs:
           PY
 
       - name: Create GitHub release
-        if: steps.release.outputs.skip != 'true' && steps.release.outputs.release_exists != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-          VERSION_TAG: ${{ steps.release.outputs.version_tag }}
+          VERSION_TAG: ${{ needs.check-tag.outputs.version_tag }}
         run: gh release create "$VERSION_TAG" --target "$GITHUB_SHA" --title "$VERSION_TAG" --notes-file release-notes.md
-
-  publish-image:
-    name: Publish image
-    needs: prepare-release
-    if: needs.prepare-release.outputs.skip != 'true'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ github.token }}
-
-      - name: Extract Docker metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ needs.prepare-release.outputs.image }}
-          tags: |
-            type=raw,value=${{ needs.prepare-release.outputs.version_tag }}
-            type=raw,value=latest
-            type=sha,format=long,prefix=sha-
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          platforms: linux/amd64,linux/arm64/v8
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
