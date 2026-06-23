@@ -8,7 +8,7 @@ The server currently exposes a single MCP tool, `ask_internet`, which searches f
 
 - `searxng` for search
 - `patchright` for page loading and scraping
-- An AI provider SDK, currently GitHub Copilot SDK
+- AI providers: GitHub Copilot SDK and OpenAI-compatible API
 - FastMCP for MCP server transport support
 
 ## Requirements
@@ -50,6 +50,7 @@ python -m patchright install chromium
 Useful commands:
 
 ```bash
+make install          # full setup: dependencies, pre-commit, browser binary
 make run
 make lint
 make lint-fix
@@ -168,6 +169,8 @@ PlayQuery reads configuration from `playquery.yaml`, then applies environment-va
 | `PLAYQUERY_AI_MODEL` | Model identifier passed to the configured AI provider session. | Any non-empty AI provider supported model name, for example `claude-haiku-4.5` or `claude-sonnet-4.6` | `claude-sonnet-4.6` in code, `claude-haiku-4.5` in the bundled sample config and prod compose |
 | `PLAYQUERY_AI_TIMEOUT` | AI request timeout in seconds. | Any positive number | `300.0` |
 | `PLAYQUERY_AI_GITHUB_TOKEN` | GitHub token used for Copilot auth when provided. | Empty/unset, or any valid GitHub token string | unset |
+| `PLAYQUERY_AI_API_KEY` | API key for the OpenAI-compatible provider. | Any API key string, or empty/unset | empty/unset |
+| `PLAYQUERY_AI_BASE_URL` | Base URL for the OpenAI-compatible API endpoint. | Any valid HTTP or HTTPS URL | `https://api.openai.com/v1` |
 | `PLAYQUERY_SEARCH_ENGINE_TYPE` | Selects the search backend. | `searxng` | `searxng` |
 | `PLAYQUERY_SEARCH_ENGINE_BASE_URL` | Base URL for the SearXNG instance. | Any valid HTTP or HTTPS URL | no code default, sample config uses `http://localhost:8080`, Compose uses `http://searxng:8080` |
 | `PLAYQUERY_SEARCH_ENGINE_USER_AGENT` | User-Agent header sent to the search backend. | Any string, or unset | unset in code, sample/prod compose use `PlayQuery/1.0` |
