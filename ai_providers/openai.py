@@ -148,14 +148,42 @@ class OpenAIProvider(BaseAIProvider[OpenAIOptions]):
             msg = response.choices[0].message
 
             if msg.tool_calls:
-                self._messages.append({"role": "assistant", "content": msg.content or ""})
+                self._messages.append(
+                    {
+                        "role": "assistant",
+                        "content": msg.content or "",
+                        "tool_calls": [
+                            {
+                                "id": tc.id,
+                                "type": "function",
+                                "function": {
+                                    "name": tc.function.name,
+                                    "arguments": tc.function.arguments,
+                                },
+                            }
+                            for tc in msg.tool_calls
+                        ],
+                    }
+                )
                 for tc in msg.tool_calls:
                     tc_id = tc.id or ""
                     tc_name = tc.function.name or ""
                     tc_args = json.loads(tc.function.arguments or "{}")
-                    result = self._tools[
-                        next(i for i, t in enumerate(self._tools) if t.name == tc_name)
-                    ].handler(
+                    tool_index = next(
+                        (i for i, t in enumerate(self._tools) if t.name == tc_name),
+                        None,
+                    )
+                    if tool_index is None:
+                        self.logger.warning("Model requested unknown tool", tool_name=tc_name)
+                        self._messages.append(
+                            {
+                                "role": "tool",
+                                "tool_call_id": tc_id,
+                                "content": f"Error: tool '{tc_name}' does not exist.",
+                            }
+                        )
+                        continue
+                    result = self._tools[tool_index].handler(
                         {
                             "session_id": "",
                             "tool_call_id": tc_id,
