@@ -111,7 +111,7 @@ http://localhost:8000/mcp
 For a hosted-style installation that pulls the published image from GHCR instead of building locally, use:
 
 ```bash
-uv run git+https://raw.githubusercontent.com/SBTopZZZ-LG/playquery/refs/heads/main/install.py
+uv run --script https://raw.githubusercontent.com/SBTopZZZ-LG/playquery/refs/heads/main/install.py
 ```
 
 This requires [uv](https://docs.astral.sh/uv/getting-started/installation/) to be installed. The installer will automatically create a temporary environment with the required dependencies (InquirerPy) and run the interactive wizard.

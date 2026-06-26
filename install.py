@@ -5,7 +5,7 @@
 """PlayQuery installer — interactive CLI wizard for deploying via Docker Compose.
 
 Usage:
-    uv run git+https://raw.githubusercontent.com/SBTopZZZ-LG/playquery/refs/heads/main/install.py
+    uv run --script https://raw.githubusercontent.com/SBTopZZZ-LG/playquery/refs/heads/main/install.py
 
 Requires: Python 3.11+, InquirerPy, Docker (docker-compose or docker compose).
 """
