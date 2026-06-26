@@ -119,6 +119,7 @@ def stack_is_running(compose_cmd: str, install_dir: Path, compose_file: Path) ->
             capture_output=True,
             text=True,
             cwd=str(install_dir),
+            check=True,  # raise error if the process returns non-zero exit code
         )
         return bool(result.stdout.strip())
     except subprocess.CalledProcessError:
@@ -141,6 +142,7 @@ def fetch_latest_version() -> str | None:
             ],
             capture_output=True,
             text=True,
+            check=True,  # raise error if the process returns non-zero exit code
         )
         if result.returncode != 0:
             return None
@@ -506,6 +508,7 @@ def main() -> None:
     subprocess.run(
         compose_cmd.split() + ["-f", str(compose_file), "pull"],
         cwd=str(install_dir),
+        check=True,  # raise error if the process returns non-zero exit code
     )
 
     # Start the stack
