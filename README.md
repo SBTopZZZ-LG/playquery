@@ -111,14 +111,10 @@ http://localhost:8000/mcp
 For a hosted-style installation that pulls the published image from GHCR instead of building locally, use:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/SBTopZZZ-LG/playquery/main/install-with-docker-compose.sh | bash
+uv run git+https://raw.githubusercontent.com/SBTopZZZ-LG/playquery/refs/heads/main/install.py
 ```
 
-On Windows PowerShell, use:
-
-```powershell
-irm https://raw.githubusercontent.com/SBTopZZZ-LG/playquery/main/install-with-docker-compose.ps1 | iex
-```
+This requires [uv](https://docs.astral.sh/uv/getting-started/installation/) to be installed. The installer will automatically create a temporary environment with the required dependencies (InquirerPy) and run the interactive wizard.
 
 The installer:
 
