@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # /// script
-# dependencies = ["InquirerPy"]
+# dependencies = ["InquirerPy", "mcp"]
 # ///
 """PlayQuery installer — interactive CLI wizard for deploying via Docker Compose.
 
@@ -12,10 +12,12 @@ Requires: Python 3.11+, InquirerPy, Docker (docker-compose or docker compose).
 
 from __future__ import annotations
 
+import asyncio
 import json
 import shutil
 import subprocess
 import sys
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from InquirerPy import inquirer
@@ -369,8 +371,64 @@ def prompt_logging_config(env: dict[str, str]) -> dict[str, str]:
 
 
 # ---------------------------------------------------------------------------
-# Main installer flow
+# Health check
 # ---------------------------------------------------------------------------
+
+
+HEALTH_CHECK_PROMPT_TEMPLATE = "get news covering the {date}"
+
+
+def get_health_check_prompt() -> str:
+    yesterday = datetime.now() - timedelta(days=1)
+    return HEALTH_CHECK_PROMPT_TEMPLATE.format(date=yesterday.strftime("%B %d, %Y"))
+
+
+async def health_check(mcp_port: int) -> bool:
+    """Run a test query against the PlayQuery MCP server to verify the stack works."""
+    from mcp.client.session import ClientSession
+    from mcp.client.streamable_http import streamable_http_client
+
+    url = f"http://localhost:{mcp_port}/mcp"
+
+    # Wait for the server to become ready by trying to connect (up to 30s)
+    import time
+
+    print("\nWaiting for PlayQuery to become ready...")
+
+    start = time.time()
+    while time.time() - start < 30:
+        try:
+            async with streamable_http_client(url) as (read, write, _):
+                async with ClientSession(read, write) as session:
+                    await session.initialize()
+                    prompt = get_health_check_prompt()
+                    print("PlayQuery is ready. Running health check...\n")
+                    print(f"  Query: {prompt}\n")
+
+                    result = await session.call_tool("ask_internet", {"query": prompt})
+
+                    # Extract text from result
+                    response_text = ""
+                    if hasattr(result, "content"):
+                        for item in result.content:
+                            if hasattr(item, "text"):
+                                response_text += item.text
+
+                    if response_text:
+                        print("─" * 60)
+                        print("Health check response:")
+                        print("─" * 60)
+                        print(response_text)
+                        print("─" * 60)
+                        return True
+                    else:
+                        sys.stderr.write("Health check returned an empty response.\n")
+                        return False
+        except Exception:
+            time.sleep(2)
+
+    sys.stderr.write("PlayQuery did not become ready within 30 seconds.\n")
+    return False
 
 
 def main() -> None:
@@ -540,6 +598,21 @@ def main() -> None:
     print("PlayQuery is starting.")
     print(f"Install directory: {install_dir}")
     print(f"MCP endpoint: http://localhost:{mcp_port}/mcp")
+
+    # Health check
+    health_prompt = get_health_check_prompt()
+    run_test = inquirer.confirm(
+        message=f"Do you want to test the setup with a simple test prompt? (Prompt: {health_prompt})",
+        default=True,
+    ).execute()
+
+    if run_test:
+        success = asyncio.run(health_check(int(mcp_port)))
+        if success:
+            print("\nHealth check passed! PlayQuery is working correctly.")
+        else:
+            print("\nHealth check failed. Please check your configuration.")
+            print(f"If the issue persists, open a new issue at: {GITHUB_ISSUES_URL}")
 
 
 if __name__ == "__main__":
